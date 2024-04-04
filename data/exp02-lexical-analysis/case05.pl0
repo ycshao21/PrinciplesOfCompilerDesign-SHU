@@ -1,0 +1,7 @@
+const 10aabbcc=1;
+
+{ THIS IS A COMMENT }
+
+begin
+    read(10aabbcc);
+end.

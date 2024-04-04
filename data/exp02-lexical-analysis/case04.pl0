@@ -1,0 +1,10 @@
+const a=1, b=7;
+var result;
+
+begin
+    if a >= b then
+        result :=a;
+
+    if a < b then
+        result := b;
+end.

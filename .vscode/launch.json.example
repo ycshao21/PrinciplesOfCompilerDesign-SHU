@@ -1,0 +1,91 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch: [Debug][Linux-x64][GDB]",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/Debug/Linux_x86_64/plazy",
+            "args": [
+                "-f",
+                "data/exp01-recognize-identifier/case02.pl0", 
+                "-o",
+                "data/result.txt"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "miDebuggerPath": "/usr/bin/gdb",
+            "preLaunchTask": "Build: [Debug][Linux]",
+        },
+        {
+            "name": "Launch: [Release][Linux-x64][GDB]",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/Release/Linux_x86_64/plazy",
+            "args": [
+                "-f",
+                "data/exp01-recognize-identifier/case02.pl0", 
+                "-o",
+                "data/result.txt"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "miDebuggerPath": "/usr/bin/gdb",
+            "preLaunchTask": "Build: [Release][Linux]",
+        },
+        {
+            "name": "Launch: [Debug][Windows-x64][MSVC] ",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/Debug/Windows_AMD64/plazy.exe",
+            "args": [
+                "-f",
+                "data/exp01-recognize-identifier/case04.pl0", 
+                "-o",
+                "data/exp01-recognize-identifier/case04.pl0.out", 
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "preLaunchTask": "Build: [Debug][Windows]"
+        },
+        {
+            "name": "Launch: [Realse][Windows-x64][MSVC]",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/Release/Windows_AMD64/plazy.exe",
+            "args": [
+                "-f",
+                "data/exp01-recognize-identifier/case11.pl0", 
+                "-o",
+                "data/result.txt"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "preLaunchTask": "Build: [Release][Windows]"
+        }
+    ]
+}

@@ -1,0 +1,49 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build: [Release][Linux]",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "${workspaceFolder}/scripts/build.sh",
+                "Release"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build: [Debug][Linux]",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "${workspaceFolder}/scripts/build.sh",
+                "Debug"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build: [Release][Windows]",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "${workspaceFolder}/scripts/build.ps1",
+                "Release"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build: [Debug][Windows]",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "${workspaceFolder}/scripts/build.ps1",
+                "Debug"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}
