@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <format>
 #include <fstream>
-// #include <iostream>
 #include <string>
 #include <vector>
 
@@ -51,14 +50,11 @@ int main(int argc, char* argv[])
     argParser.addOption("o", "The output file", "string", "a.out");
     argParser.parse(argc, argv);
 
-    std::string srcFile, outputFile;
-    auto value = argParser.get<std::string>("f");
-    std::cout << "Source file: " << *value << std::endl;
-    srcFile = *value;
+    std::string srcFile = *(argParser.get<std::string>("f"));
+    std::cout << "Source file: " << srcFile << std::endl;
 
-    value = argParser.get<std::string>("o");
-    std::cout << "Output file: " << *value << std::endl;
-    outputFile = *value;
+    std::string outputFile = *(argParser.get<std::string>("o"));
+    std::cout << "Output file: " << outputFile << std::endl;
 
     recognizeIdent(srcFile, outputFile);
 }
