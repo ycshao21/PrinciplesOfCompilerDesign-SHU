@@ -2,7 +2,7 @@
 
 namespace PL0
 {
-Scanner::Scanner(const std::string& filename) : m_file(filename), m_curChar(EOF), m_line(1)
+Scanner::Scanner(const std::string& filename) : m_file(filename), m_curChar(EOF)
 {
     if (!m_file.is_open()) {
         throw std::runtime_error("Failed to open file: " + filename);
@@ -17,9 +17,6 @@ Scanner::~Scanner()
 
 void Scanner::forward()
 {
-    if (m_curChar == '\n') {
-        ++m_line;
-    }
     m_curChar = m_file.get();
 }
 

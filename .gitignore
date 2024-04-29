@@ -36,7 +36,6 @@ build/*
 
 # Output Directory
 bin/*
-bin-tests/*
 
 .vscode/*
 !.vscode/*.example

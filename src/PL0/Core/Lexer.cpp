@@ -1,5 +1,5 @@
 #include "PL0/Core/Lexer.hpp"
-#include "PL0/Utils/Error.hpp"
+#include "PL0/Utils/Reporter.hpp"
 
 #include <algorithm>
 #include <string>
@@ -32,7 +32,8 @@ Word Lexer::getNumber()
     if (isAlpha(m_scanner.getChar())) {
         word.type = WordType::Invalid;
         word.value += m_scanner.getUntil(isAlphaOrDigit);
-        SHOW_ERROR(m_scanner.getLineNumber(), "Invalid identifier", word.value);
+        // Reporter::error("Invalid identifier: {}", word.value);
+        Reporter::error(std::format("Invalid identifier: {}", word.value));
     }
     return word;
 }
@@ -59,7 +60,8 @@ Word Lexer::getOperator()
             m_scanner.forward();
         } else {
             word.type = WordType::Invalid;
-            SHOW_ERROR(m_scanner.getLineNumber(), "Invalid operator", word.value);
+            // Reporter::error("Invalid operator", word.value);
+            Reporter::error(std::format("Invalid operator: {}", word.value));
         }
     }
     return word;
@@ -81,7 +83,8 @@ Word Lexer::getKeywordOrIdentifier()
 Word Lexer::getUnknownSymbol()
 {
     Word word{WordType::Invalid, m_scanner.getAsString()};
-    SHOW_ERROR(m_scanner.getLineNumber(), "Unknown symbol", word.value);
+    // Reporter::error("Unknown symbol", word.value);
+    Reporter::error(std::format("Unknown symbol: {}", word.value));
     m_scanner.forward();
     return word;
 }

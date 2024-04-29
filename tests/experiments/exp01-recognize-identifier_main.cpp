@@ -14,8 +14,7 @@ struct IdentInfo
 
 void recognizeIdent(const std::string& srcFile, const std::string& outputFile)
 {
-    PL0::Scanner scanner(srcFile);
-    PL0::Lexer lexer(scanner);
+    PL0::Lexer lexer(srcFile);
 
     std::vector<IdentInfo> identifiers;
 
@@ -35,7 +34,7 @@ void recognizeIdent(const std::string& srcFile, const std::string& outputFile)
 
     std::ofstream output(outputFile);
     if (!output.is_open()) {
-        throw std::runtime_error("Failed to open file: " + outputFile);
+        throw std::runtime_error(std::format("Failed to open file: {}", outputFile));
     }
     for (const auto& [ident, count] : identifiers) {
         output << std::format("({}: {})", ident, count) << std::endl;

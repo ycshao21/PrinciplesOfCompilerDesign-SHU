@@ -1,13 +1,13 @@
 #pragma once
 #include "PL0/Core/Scanner.hpp"
-#include "PL0/Utils/Word.hpp"
+#include "PL0/Core/Word.hpp"
 
 namespace PL0
 {
 class Lexer
 {
 public:
-    Lexer(Scanner& scanner) : m_scanner(scanner)
+    Lexer(const std::string& srcFile) : m_scanner(srcFile)
     {
     }
     ~Lexer() = default;
@@ -21,6 +21,6 @@ private:
     Word getUnknownSymbol();
 
 private:
-    Scanner& m_scanner;
+    Scanner m_scanner;
 };
 }  // namespace PL0

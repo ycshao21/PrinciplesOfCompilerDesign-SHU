@@ -43,7 +43,7 @@ static std::string encode(const PL0::Word& word)
         } else if (word.value == ":=") {
             return "becomes";
         } else {
-            throw std::runtime_error("Unknown operator: " + word.value);
+            throw std::runtime_error(std::format("Unknown operator: {}", word.value));
         }
     }
     case PL0::WordType::Delimiter: {
@@ -58,21 +58,20 @@ static std::string encode(const PL0::Word& word)
         } else if (word.value == ".") {
             return "period";
         } else {
-            throw std::runtime_error("Unknown delimiter: " + word.value);
+            throw std::runtime_error(std::format("Unknown delimiter: {}", word.value));
         }
     }
     }
     return "nul";
 }
 
-void lexicalAnalysis(const std::string& srcFile, const std::string& outputFile)
+void analyzeLexical(const std::string& srcFile, const std::string& outputFile)
 {
-    PL0::Scanner scanner(srcFile);
-    PL0::Lexer lexer(scanner);
+    PL0::Lexer lexer(srcFile);
 
     std::ofstream output(outputFile);
     if (!output.is_open()) {
-        throw std::runtime_error("Failed to open file: " + outputFile);
+        throw std::runtime_error(std::format("Failed to open file: {}", outputFile));
     }
     for (PL0::Word word = lexer.getNextWord(); word.type != PL0::WordType::EndOfFile;
          word = lexer.getNextWord()) {
@@ -95,5 +94,5 @@ int main(int argc, char* argv[])
     std::string outputFile = *(argParser.get<std::string>("o"));
     std::cout << "Output file: " << outputFile << std::endl;
 
-    lexicalAnalysis(srcFile, outputFile);
+    analyzeLexical(srcFile, outputFile);
 }
