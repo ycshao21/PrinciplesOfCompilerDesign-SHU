@@ -1,24 +1,22 @@
 #pragma once
+#include "PL0/Core/Token.hpp"
 #include "PL0/Core/Scanner.hpp"
-#include "PL0/Core/Word.hpp"
 
 namespace PL0
 {
 class Lexer
 {
 public:
-    Lexer(const std::string& srcFile) : m_scanner(srcFile)
-    {
-    }
+    Lexer(const std::string& srcFile);
     ~Lexer() = default;
-    Word getNextWord();
+    Token getNextToken();
 
 private:
-    Word getNumber();
-    Word getOperator();
-    Word getDelimiter();
-    Word getKeywordOrIdentifier();
-    Word getUnknownSymbol();
+    Token getNumber();
+    Token getOperator();
+    Token getDelimiter();
+    Token getKeywordOrIdentifier();
+    Token getUnknownSymbol();
 
 private:
     Scanner m_scanner;

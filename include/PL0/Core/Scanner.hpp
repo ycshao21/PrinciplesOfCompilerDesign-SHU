@@ -1,7 +1,7 @@
 #pragma once
 #include <fstream>
-#include <string>
 #include <functional>
+#include <string>
 
 namespace PL0
 {
@@ -11,12 +11,12 @@ public:
     Scanner(const std::string& filename);
     ~Scanner();
 
-    inline char getChar() const
+    inline char get() const
     {
         return m_curChar;
     }
 
-    inline std::string getAsString() const
+    inline std::string getAsStr() const
     {
         return std::string(1, m_curChar);
     }

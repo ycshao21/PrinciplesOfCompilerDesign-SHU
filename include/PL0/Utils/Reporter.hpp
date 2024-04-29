@@ -8,7 +8,6 @@ namespace PL0
 class Reporter
 {
 public:
-
     static void error(const std::string& message)
     {
         std::cout << std::format("{}ERROR >>> {}\n{}", m_errorColor, message, m_resetColor);

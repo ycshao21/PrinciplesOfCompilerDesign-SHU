@@ -6,7 +6,7 @@
 
 namespace PL0
 {
-enum class WordType : uint8_t
+enum class TokenType : uint8_t
 {
     Invalid = 0,
     Keyword,
@@ -17,9 +17,9 @@ enum class WordType : uint8_t
     EndOfFile
 };
 
-struct Word
+struct Token
 {
-    WordType type;
+    TokenType type;
     std::string value;
 };
 

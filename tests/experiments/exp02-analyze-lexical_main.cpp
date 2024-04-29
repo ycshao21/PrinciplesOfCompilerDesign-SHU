@@ -7,58 +7,58 @@
 
 #include "PL0.hpp"
 
-static std::string encode(const PL0::Word& word)
+static std::string encode(const PL0::Token& token)
 {
-    switch (word.type) {
-    case PL0::WordType::Keyword: {
-        return word.value + "sym";
+    switch (token.type) {
+    case PL0::TokenType::Keyword: {
+        return token.value + "sym";
     }
-    case PL0::WordType::Identifier: {
+    case PL0::TokenType::Identifier: {
         return "ident";
     }
-    case PL0::WordType::Number: {
+    case PL0::TokenType::Number: {
         return "number";
     }
-    case PL0::WordType::Operator: {
-        if (word.value == "+") {
+    case PL0::TokenType::Operator: {
+        if (token.value == "+") {
             return "plus";
-        } else if (word.value == "-") {
+        } else if (token.value == "-") {
             return "minus";
-        } else if (word.value == "*") {
+        } else if (token.value == "*") {
             return "times";
-        } else if (word.value == "/") {
+        } else if (token.value == "/") {
             return "slash";
-        } else if (word.value == "=") {
+        } else if (token.value == "=") {
             return "eql";
-        } else if (word.value == "#") {
+        } else if (token.value == "#") {
             return "neq";
-        } else if (word.value == "<") {
+        } else if (token.value == "<") {
             return "lss";
-        } else if (word.value == "<=") {
+        } else if (token.value == "<=") {
             return "leq";
-        } else if (word.value == ">") {
+        } else if (token.value == ">") {
             return "gtr";
-        } else if (word.value == ">=") {
+        } else if (token.value == ">=") {
             return "geq";
-        } else if (word.value == ":=") {
+        } else if (token.value == ":=") {
             return "becomes";
         } else {
-            throw std::runtime_error(std::format("Unknown operator: {}", word.value));
+            throw std::runtime_error(std::format("Unknown operator: {}", token.value));
         }
     }
-    case PL0::WordType::Delimiter: {
-        if (word.value == "(") {
+    case PL0::TokenType::Delimiter: {
+        if (token.value == "(") {
             return "lparen";
-        } else if (word.value == ")") {
+        } else if (token.value == ")") {
             return "rparen";
-        } else if (word.value == ",") {
+        } else if (token.value == ",") {
             return "comma";
-        } else if (word.value == ";") {
+        } else if (token.value == ";") {
             return "semicolon";
-        } else if (word.value == ".") {
+        } else if (token.value == ".") {
             return "period";
         } else {
-            throw std::runtime_error(std::format("Unknown delimiter: {}", word.value));
+            throw std::runtime_error(std::format("Unknown delimiter: {}", token.value));
         }
     }
     }
@@ -73,10 +73,10 @@ void analyzeLexical(const std::string& srcFile, const std::string& outputFile)
     if (!output.is_open()) {
         throw std::runtime_error(std::format("Failed to open file: {}", outputFile));
     }
-    for (PL0::Word word = lexer.getNextWord(); word.type != PL0::WordType::EndOfFile;
-         word = lexer.getNextWord()) {
-        std::string encodedType = encode(word);
-        output << std::format("({}, {})", encodedType, word.value) << std::endl;
+    for (PL0::Token token = lexer.getNextToken(); token.type != PL0::TokenType::EndOfFile;
+         token = lexer.getNextToken()) {
+        std::string encodedType = encode(token);
+        output << std::format("({}, {})", encodedType, token.value) << std::endl;
     }
     output.close();
 }

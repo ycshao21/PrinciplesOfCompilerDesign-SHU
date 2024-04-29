@@ -6,87 +6,91 @@
 
 namespace PL0
 {
-Word Lexer::getNextWord()
+Lexer::Lexer(const std::string& srcFile) : m_scanner(srcFile)
+{
+}
+
+Token Lexer::getNextToken()
 {
     m_scanner.skipSpaceAndComments();
-    char ch = m_scanner.getChar();
+    char c = m_scanner.get();
 
-    if (isAlpha(ch)) {
+    if (isAlpha(c)) {
         return getKeywordOrIdentifier();
-    } else if (isDigit(ch)) {
+    } else if (isDigit(c)) {
         return getNumber();
-    } else if (isDelimiter(ch)) {
+    } else if (isDelimiter(c)) {
         return getDelimiter();
-    } else if (isOperatorChar(ch)) {
+    } else if (isOperatorChar(c)) {
         return getOperator();
-    } else if (ch == EOF) {
-        return {WordType::EndOfFile, ""};
+    } else if (c == EOF) {
+        return {TokenType::EndOfFile, ""};
     } else {
         return getUnknownSymbol();
     }
 }
 
-Word Lexer::getNumber()
+Token Lexer::getNumber()
 {
-    Word word{WordType::Number, m_scanner.getUntil(isDigit)};
-    if (isAlpha(m_scanner.getChar())) {
-        word.type = WordType::Invalid;
-        word.value += m_scanner.getUntil(isAlphaOrDigit);
-        // Reporter::error("Invalid identifier: {}", word.value);
-        Reporter::error(std::format("Invalid identifier: {}", word.value));
+    Token token{TokenType::Number, m_scanner.getUntil(isDigit)};
+    if (isAlpha(m_scanner.get())) {
+        token.type = TokenType::Invalid;
+        token.value += m_scanner.getUntil(isAlphaOrDigit);
+        // Reporter::error("Invalid identifier: {}", token.value);
+        Reporter::error(std::format("Invalid identifier: {}", token.value));
     }
-    return word;
+    return token;
 }
 
-Word Lexer::getDelimiter()
+Token Lexer::getDelimiter()
 {
-    Word word = {WordType::Delimiter, m_scanner.getAsString()};
+    Token token = {TokenType::Delimiter, m_scanner.getAsStr()};
     m_scanner.forward();
-    return word;
+    return token;
 }
 
-Word Lexer::getOperator()
+Token Lexer::getOperator()
 {
-    Word word{WordType::Operator, m_scanner.getAsString()};
+    Token token{TokenType::Operator, m_scanner.getAsStr()};
     m_scanner.forward();
-    if (word.value == "<" || word.value == ">") {
-        if (m_scanner.getChar() == '=') {  // >=, <=
-            word.value += '=';
+    if (token.value == "<" || token.value == ">") {
+        if (m_scanner.get() == '=') {  // >=, <=
+            token.value += '=';
             m_scanner.forward();
         }
-    } else if (word.value == ":") {
-        if (m_scanner.getChar() == '=') {  // :=
-            word.value += '=';
+    } else if (token.value == ":") {
+        if (m_scanner.get() == '=') {  // :=
+            token.value += '=';
             m_scanner.forward();
         } else {
-            word.type = WordType::Invalid;
-            // Reporter::error("Invalid operator", word.value);
-            Reporter::error(std::format("Invalid operator: {}", word.value));
+            token.type = TokenType::Invalid;
+            // Reporter::error("Invalid operator", token.value);
+            Reporter::error(std::format("Invalid operator: {}", token.value));
         }
     }
-    return word;
+    return token;
 }
 
-Word Lexer::getKeywordOrIdentifier()
+Token Lexer::getKeywordOrIdentifier()
 {
-    Word word;
-    word.value = m_scanner.getUntil(isAlphaOrDigit);
-    std::ranges::transform(word.value, word.value.begin(), ::tolower);
-    if (std::ranges::find(KEYWORDS, word.value) != KEYWORDS.end()) {
-        word.type = WordType::Keyword;
+    Token token;
+    token.value = m_scanner.getUntil(isAlphaOrDigit);
+    std::ranges::transform(token.value, token.value.begin(), ::tolower);
+    if (std::ranges::find(KEYWORDS, token.value) != KEYWORDS.end()) {
+        token.type = TokenType::Keyword;
     } else {
-        word.type = WordType::Identifier;
+        token.type = TokenType::Identifier;
     }
-    return word;
+    return token;
 }
 
-Word Lexer::getUnknownSymbol()
+Token Lexer::getUnknownSymbol()
 {
-    Word word{WordType::Invalid, m_scanner.getAsString()};
-    // Reporter::error("Unknown symbol", word.value);
-    Reporter::error(std::format("Unknown symbol: {}", word.value));
+    Token token{TokenType::Invalid, m_scanner.getAsStr()};
+    // Reporter::error("Unknown symbol", token.value);
+    Reporter::error(std::format("Unknown symbol: {}", token.value));
     m_scanner.forward();
-    return word;
+    return token;
 }
 
 }  // namespace PL0

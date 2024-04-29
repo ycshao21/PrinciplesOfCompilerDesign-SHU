@@ -7,7 +7,7 @@ Scanner::Scanner(const std::string& filename) : m_file(filename), m_curChar(EOF)
     if (!m_file.is_open()) {
         throw std::runtime_error("Failed to open file: " + filename);
     }
-    m_curChar = m_file.get();
+    forward();
 }
 
 Scanner::~Scanner()

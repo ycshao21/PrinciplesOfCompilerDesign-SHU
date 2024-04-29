@@ -18,14 +18,13 @@ void recognizeIdent(const std::string& srcFile, const std::string& outputFile)
 
     std::vector<IdentInfo> identifiers;
 
-    for (PL0::Word word = lexer.getNextWord(); word.type != PL0::WordType::EndOfFile;
-         word = lexer.getNextWord()) {
-        if (word.type == PL0::WordType::Identifier) {
-            auto fn = [&word](const IdentInfo& info) { return info.ident == word.value; };
+    for (PL0::Token token = lexer.getNextToken(); token.type != PL0::TokenType::EndOfFile;
+         token = lexer.getNextToken()) {
+        if (token.type == PL0::TokenType::Identifier) {
+            auto fn = [&token](const IdentInfo& info) { return info.ident == token.value; };
             auto it = std::ranges::find_if(identifiers, fn);
-
             if (it == identifiers.end()) {
-                identifiers.push_back({word.value, 1});
+                identifiers.push_back({token.value, 1});
             } else {
                 it->count++;
             }
