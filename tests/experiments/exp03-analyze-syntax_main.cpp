@@ -9,16 +9,11 @@
 
 void analyzeSyntax(const std::string& srcFile)
 {
-    // PL0::Lexer lexer;
-    // std::vector<PL0::Token> tokens = lexer.tokenize(srcFile);
+    PL0::Lexer lexer;
+    std::vector<PL0::Token> tokens = lexer.tokenize(srcFile);
 
-    // PL0::Parser parser;
-    // bool success = parser.parse(tokens);
-    // if (success) {
-    //     PL0::Reporter::info("Parsing succeeded!");
-    // } else {
-    //     PL0::Reporter::error("Parsing failed!");
-    // }
+    PL0::Parser parser;
+    parser.parse(tokens);
 }
 
 int main(int argc, char* argv[])
