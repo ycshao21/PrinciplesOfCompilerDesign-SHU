@@ -24,12 +24,5 @@ if [ ! -f $SRC_FILE ]; then
     exit 1
 fi
 
-# Make directories for outputs
-OUT_DIR=tests/outputs/exp03-analyze-syntax
-if [ ! -d $OUT_DIR ]; then
-    mkdir -p $OUT_DIR
-fi
-OUT_FILE=$OUT_DIR/$1.out
-
 # Compile the program and save the output
-$BIN -f $SRC_FILE -o $OUT_FILE
+$BIN -f $SRC_FILE

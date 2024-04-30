@@ -24,10 +24,6 @@ var
 
             c := 2 * c
 
-        else
-
-            c := 2 * c + 1;
-
 
 begin
 

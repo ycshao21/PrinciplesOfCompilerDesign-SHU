@@ -13,8 +13,8 @@ enum class TokenType : uint8_t
     Identifier,
     Number,
     Operator,
-    Delimiter,
-    EndOfFile
+    Delimiter
+    // EndOfFile
 };
 
 struct Token
@@ -55,4 +55,7 @@ inline bool isOperatorChar(char c)
 {
     return std::ranges::find(OPERATORS_CH, c) != OPERATORS_CH.end();
 }
+
+std::string encode(const Token& token);
+
 }  // namespace PL0

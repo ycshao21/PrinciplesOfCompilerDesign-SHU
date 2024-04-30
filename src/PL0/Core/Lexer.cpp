@@ -6,36 +6,45 @@
 
 namespace PL0
 {
-Lexer::Lexer(const std::string& srcFile) : m_scanner(srcFile)
+std::vector<Token> Lexer::tokenize(const std::string& srcFile)
 {
-}
+    m_scanner = std::make_unique<Scanner>(srcFile);
 
-Token Lexer::getNextToken()
-{
-    m_scanner.skipSpaceAndComments();
-    char c = m_scanner.get();
+    std::vector<Token> tokens;
 
-    if (isAlpha(c)) {
-        return getKeywordOrIdentifier();
-    } else if (isDigit(c)) {
-        return getNumber();
-    } else if (isDelimiter(c)) {
-        return getDelimiter();
-    } else if (isOperatorChar(c)) {
-        return getOperator();
-    } else if (c == EOF) {
-        return {TokenType::EndOfFile, ""};
-    } else {
-        return getUnknownSymbol();
+    while (true) {
+        m_scanner->skipSpaceAndComments();
+        char c = m_scanner->get();
+
+        if (c == EOF) {
+            break;
+        }
+
+        Token token;
+        if (isAlpha(c)) {
+            token = getKeywordOrIdentifier();
+        } else if (isDigit(c)) {
+            token = getNumber();
+        } else if (isDelimiter(c)) {
+            token = getDelimiter();
+        } else if (isOperatorChar(c)) {
+            token = getOperator();
+        } else {
+            token = getUnknownSymbol();
+        }
+        tokens.push_back(token);
     }
+
+    m_scanner.reset();
+    return tokens;
 }
 
 Token Lexer::getNumber()
 {
-    Token token{TokenType::Number, m_scanner.getUntil(isDigit)};
-    if (isAlpha(m_scanner.get())) {
+    Token token{TokenType::Number, m_scanner->getUntil(isDigit)};
+    if (isAlpha(m_scanner->get())) {
         token.type = TokenType::Invalid;
-        token.value += m_scanner.getUntil(isAlphaOrDigit);
+        token.value += m_scanner->getUntil(isAlphaOrDigit);
         // Reporter::error("Invalid identifier: {}", token.value);
         Reporter::error(std::format("Invalid identifier: {}", token.value));
     }
@@ -44,24 +53,24 @@ Token Lexer::getNumber()
 
 Token Lexer::getDelimiter()
 {
-    Token token = {TokenType::Delimiter, m_scanner.getAsStr()};
-    m_scanner.forward();
+    Token token = {TokenType::Delimiter, m_scanner->getAsStr()};
+    m_scanner->forward();
     return token;
 }
 
 Token Lexer::getOperator()
 {
-    Token token{TokenType::Operator, m_scanner.getAsStr()};
-    m_scanner.forward();
+    Token token{TokenType::Operator, m_scanner->getAsStr()};
+    m_scanner->forward();
     if (token.value == "<" || token.value == ">") {
-        if (m_scanner.get() == '=') {  // >=, <=
+        if (m_scanner->get() == '=') {  // >=, <=
             token.value += '=';
-            m_scanner.forward();
+            m_scanner->forward();
         }
     } else if (token.value == ":") {
-        if (m_scanner.get() == '=') {  // :=
+        if (m_scanner->get() == '=') {  // :=
             token.value += '=';
-            m_scanner.forward();
+            m_scanner->forward();
         } else {
             token.type = TokenType::Invalid;
             // Reporter::error("Invalid operator", token.value);
@@ -74,7 +83,7 @@ Token Lexer::getOperator()
 Token Lexer::getKeywordOrIdentifier()
 {
     Token token;
-    token.value = m_scanner.getUntil(isAlphaOrDigit);
+    token.value = m_scanner->getUntil(isAlphaOrDigit);
     std::ranges::transform(token.value, token.value.begin(), ::tolower);
     if (std::ranges::find(KEYWORDS, token.value) != KEYWORDS.end()) {
         token.type = TokenType::Keyword;
@@ -86,10 +95,10 @@ Token Lexer::getKeywordOrIdentifier()
 
 Token Lexer::getUnknownSymbol()
 {
-    Token token{TokenType::Invalid, m_scanner.getAsStr()};
+    Token token{TokenType::Invalid, m_scanner->getAsStr()};
     // Reporter::error("Unknown symbol", token.value);
     Reporter::error(std::format("Unknown symbol: {}", token.value));
-    m_scanner.forward();
+    m_scanner->forward();
     return token;
 }
 
