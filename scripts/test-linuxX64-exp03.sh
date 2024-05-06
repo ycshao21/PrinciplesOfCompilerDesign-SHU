@@ -11,7 +11,7 @@ if [[ $1 != *.pl0 ]]; then
 fi
 
 # Check if binary file exists
-BIN=bin/Release/Linux_x86_64/exp01
+BIN=bin/Release/Linux_x86_64/exp03
 if [ ! -f $BIN ]; then
     echo "Error: $BIN does not exist"
     exit 1
