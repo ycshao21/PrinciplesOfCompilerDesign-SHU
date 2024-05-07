@@ -137,7 +137,7 @@ void LL1Parser::parse(const std::vector<Token>& tokens)
                 for (const auto& [sym, _] : allRules) {
                     symStr += sym + ", ";
                 }
-                Reporter::error(std::format("Syntax error: expected {} but got {}.", symStr, rtop));
+                Reporter::error(std::format("Syntax error: expected {}but got {}.", symStr, rtop));
                 return;
             }
             const auto& rule = m_table[atop][rtop];
