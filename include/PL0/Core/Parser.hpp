@@ -9,13 +9,13 @@ class Parser
 {
 public:
     Parser() = default;
-    ~Parser() = default;
+    virtual ~Parser() = default;
 
     virtual void parse(const std::vector<Token>& tokens) = 0;
 
 protected:
     std::unique_ptr<std::vector<Token>> m_tokens = nullptr;
-    std::size_t m_curIndex = 0;
+    size_t m_curIndex = 0;
 };
 
 }  // namespace PL0
