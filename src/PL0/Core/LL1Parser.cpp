@@ -7,14 +7,14 @@ namespace PL0
 {
 LL1Parser::LL1Parser()
 {
+    m_syntax.setBeginSym("E");
     // Arithmetic expression:
-    //   E -> + E'
-    //   E -> - E'
-    //   E -> E'
-    //   E' -> T E''
-    //   E'' -> + T E''
-    //   E'' -> - T E''
-    //   E'' -> ε
+    //   E -> + T E'
+    //   E -> - T E'
+    //   E -> T E'
+    //   E' -> + T E'
+    //   E' -> - T E'
+    //   E' -> ε
     //   T -> F T'
     //   T' -> * F T'
     //   T' -> / F T'
@@ -25,30 +25,29 @@ LL1Parser::LL1Parser()
     //
     // where E is for expression, T is for term, F is for factor.
 
-    m_syntax.setBeginSym("E");
+    m_syntax.addRule("E", {"+", "T", "E'"});
+    m_syntax.addRule("E", {"-", "T", "E'"});
+    m_syntax.addRule("E", {"T", "E'"});
+    m_syntax.addRule("E'", {"+", "T", "E'"});
+    m_syntax.addRule("E'", {"-", "T", "E'"});
+    m_syntax.addRule("E'", {EPSILON});
+    m_syntax.addRule("T", {"F", "T'"});
+    m_syntax.addRule("T'", {"*", "F", "T'"});
+    m_syntax.addRule("T'", {"/", "F", "T'"});
+    m_syntax.addRule("T'", {EPSILON});
+    m_syntax.addRule("F", {"(", "E", ")"});
+    m_syntax.addRule("F", {"id"});
+    m_syntax.addRule("F", {"num"});
 
-    m_syntax.addProductionRule("E", {"+", "E'"});
-    m_syntax.addProductionRule("E", {"-", "E'"});
-    m_syntax.addProductionRule("E", {"E'"});
-    m_syntax.addProductionRule("E'", {"T", "E''"});
-    m_syntax.addProductionRule("E''", {"+", "T", "E''"});
-    m_syntax.addProductionRule("E''", {"-", "T", "E''"});
-    m_syntax.addProductionRule("E''", {""});
-    m_syntax.addProductionRule("T", {"F", "T'"});
-    m_syntax.addProductionRule("T'", {"*", "F", "T'"});
-    m_syntax.addProductionRule("T'", {"/", "F", "T'"});
-    m_syntax.addProductionRule("T'", {""});
-    m_syntax.addProductionRule("F", {"(", "E", ")"});
-    m_syntax.addProductionRule("F", {"id"});
-    m_syntax.addProductionRule("F", {"num"});
-
-    m_syntax.calcSelectSet();
+    m_syntax.calcSelectSets();
     generatePredictionTable();
+
+    // m_syntax.printResults();
 }
 
 void LL1Parser::generatePredictionTable()
 {
-    const auto& rules = m_syntax.getProductionRules();
+    const auto& rules = m_syntax.getRules();
     for (size_t i = 0; i < rules.size(); ++i) {
         const auto& rule = rules[i];
         const Symbol& lhs = rule.lhs;
@@ -118,7 +117,6 @@ void LL1Parser::parse(const std::vector<Token>& tokens)
         std::cout << "--------------------------------------------------------------------------\n";
 
         if (m_syntax.isTerminal(atop) || atop == "#")
-        // Error: The terminal symbol does not match the top of the input stack.
         {
             if (atop != rtop) {
                 Reporter::error(std::format("Syntax error: The terminal symbol {} does not match "
@@ -132,12 +130,15 @@ void LL1Parser::parse(const std::vector<Token>& tokens)
         } else {
             const auto& allRules = m_table[atop];
             auto itemIt = allRules.find(rtop);
+            // Production rules not found
             if (itemIt == allRules.end()) {
-                std::string symStr;
-                for (const auto& [sym, _] : allRules) {
-                    symStr += sym + ", ";
-                }
-                Reporter::error(std::format("Syntax error: expected {}but got {}.", symStr, rtop));
+                // std::string symStr;
+                // for (const auto& [sym, _] : allRules) {
+                //     symStr += sym + ", ";
+                // }
+                // Reporter::error(std::format("Syntax error: expected {}but got {}.", symStr, rtop));
+                Reporter::error(std::format("Syntax error: {} is not allowed.", rtop));
+
                 return;
             }
             const auto& rule = m_table[atop][rtop];

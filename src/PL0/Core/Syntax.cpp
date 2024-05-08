@@ -5,35 +5,42 @@
 
 namespace PL0
 {
-void Syntax::addProductionRule(const Symbol& lhs, const std::vector<Symbol>& rhs)
+void Syntax::addRule(const Symbol& lhs, const std::vector<Symbol>& rhs)
 {
-    // Add the production rule
-    ProductionRule rule{lhs, rhs};
-    m_productionRules.push_back(rule);
+    Rule rule{lhs, rhs};
+    m_rules.push_back(rule);
 
-    // Mark the left-hand side symbol as non-terminal
+    ///////////////////////////////////////////
+    // Collect all terminals and non-terminals
+    ///////////////////////////////////////////
+
+    // For the left-hand side symbol, it must be a non-terminal.
     m_nonTerminals.insert(lhs);
 
-    for (const Symbol& sym : rhs) {
-        if (sym.empty()) {
-            continue;
-        }
+    // For the right-hand side symbols, they can be terminals, non-terminals, or ε.
+    if (rhs[0] == EPSILON) {  // Skip ε
+        return;
+    }
 
+    for (const Symbol& sym : rhs) {
         if (std::isupper(sym[0])) {
-            // Mark the symbol as non-terminal
+            // If the symbol begins with A-Z, it is a non-terminal.
             m_nonTerminals.insert(sym);
         } else {
-            // Mark the symbol as terminal
+            // Otherwise, it is a terminal.
+            // e.g. id, +, (
             m_terminals.insert(sym);
         }
     }
 }
 
-void Syntax::calcFirstSet()
+void Syntax::calcFirstSets()
 {
     m_firstSet.clear();
 
-    // 1. If X is a terminal symbol, then FIRST(X) = {X}.
+    //////////////////////////////////////////////////////
+    // If X is a terminal symbol, then FIRST(X) = {X}.
+    //////////////////////////////////////////////////////
     for (const Symbol& sym : m_terminals) {
         m_firstSet[sym] = {sym};
     }
@@ -41,122 +48,69 @@ void Syntax::calcFirstSet()
         m_firstSet[sym] = {};
     }
 
+    // Keep iterating until no more symbols can be added to the FIRST set.
     bool updated;
     do {
         updated = false;
-        for (const auto& rule : m_productionRules) {
-            const auto& lhs = rule.lhs;
-            const auto& rhs = rule.rhs;
+        m_firstSetCache.clear();
 
-            const auto& firstSym = rhs[0];
-            auto& firstSet = m_firstSet[lhs];
+        for (const auto& rule : m_rules) {
+            auto [firstSet, allHasEpsilon] = calcFirstSetOfSyms(rule.rhs, 0, rule.lhs.size());
 
-            // 2. If X -> a... exists, where a is a terminal, then add a to FIRST(X).
-            // 3. If X -> ε, then add ε to FIRST(X).
-            if (firstSym.empty() || isTerminal(firstSym)) {
-                auto [_, inserted] = firstSet.insert(firstSym);
+            for (const Symbol& sym : firstSet) {
+                auto [_, inserted] = m_firstSet[rule.lhs].insert(sym);
                 if (inserted) {
                     updated = true;
                 }
-            } else {
-                // X -> Y1 Y2 ... Yk, where Y1, Y2, ..., Yk are non-terminals.
+            }
 
-                // 4. If Y1, Y2, ..., Yi-1 => ε, then add First(Y1)-{ε}, First(Y2)-{ε}, ...,
-                // First(Yi) to FIRST(X).
-                bool allNull = true;
-                for (const Symbol& sym : rhs) {
-                    auto& symFirstSet = m_firstSet[sym];
-                    bool hasNull = false;
-                    for (const Symbol& s : symFirstSet) {
-                        if (s.empty()) {
-                            hasNull = true;
-                            continue;
-                        }
-
-                        // Add non-empty symbols
-                        auto [_, inserted] = firstSet.insert(s);
-                        if (inserted) {
-                            updated = true;
-                        }
-                    }
-
-                    if (hasNull == false) {
-                        allNull = false;
-                        break;
-                    }
-                }
-
-                // 5. If Yi => ε for all i = 1, 2, ..., k, then add ε to FIRST(X).
-                if (allNull) {
-                    auto [_, inserted] = firstSet.insert("");
-                    if (inserted) {
-                        updated = true;
-                    }
-                }
+            if (!updated) {
+                m_firstSetCache.push_back({firstSet, allHasEpsilon});
             }
         }
     } while (updated);
 }
 
-void Syntax::calcFollowSet()
+void Syntax::calcFollowSets()
 {
     m_followSet.clear();
 
-    // Initialize the FOLLOW set for each non-terminal symbol
     for (const auto& sym : m_nonTerminals) {
         m_followSet[sym] = {};
     }
-
-    // 1. Add # to the FOLLOW set of the start symbol
+    ///////////////////////////////////////////////////
+    // Add # to the FOLLOW set of the begin symbol.
+    ///////////////////////////////////////////////////
     m_followSet[m_beginSym].insert("#");
 
+    // Keep iterating until no more symbols can be added to the FOLLOW set.
     bool updated;
     do {
         updated = false;
-        for (const auto& rule : m_productionRules) {
+        for (const auto& rule : m_rules) {
             const auto& lhs = rule.lhs;
             const auto& rhs = rule.rhs;
 
             for (size_t i = 0; i < rhs.size(); ++i) {
-                const Symbol& sym = rhs[i];
+                const Symbol& rhsSym = rhs[i];
 
-                // If the symbol is a non-terminal, add the FIRST set of the next symbol to the
-                // FOLLOW set of the current symbol.
-                if (isNonTerminal(sym)) {
-                    bool hasNull = false;
-                    size_t j = i + 1;
-                    for (; j < rhs.size(); ++j) {
-                        // NOTE: It is guaranteed that nextSym is not ε.
-                        const Symbol& nextSym = rhs[j];
-                        if (isTerminal(nextSym)) {
-                            auto [_, inserted] = m_followSet[sym].insert(nextSym);
+                if (isNonTerminal(rhsSym)) {
+                    // Add the FIRST set of the next symbol to the FOLLOW set of the current symbol.
+                    auto [firstSet, allHasEpsilon] = calcFirstSetOfSyms(rhs, i + 1, rhs.size());
+                    for (const Symbol& sym : firstSet) {
+                        if (sym != EPSILON) {
+                            auto [_, inserted] = m_followSet[rhsSym].insert(sym);
                             if (inserted) {
                                 updated = true;
                             }
-                            break;
-                        } else {
-                            for (const Symbol& s : m_firstSet[nextSym]) {
-                                if (!s.empty()) {
-                                    auto [_, inserted] = m_followSet[sym].insert(s);
-                                    if (inserted) {
-                                        updated = true;
-                                    }
-                                } else {
-                                    hasNull = true;
-                                }
-                            }
-                        }
-
-                        if (!hasNull) {
-                            break;
                         }
                     }
 
-                    // If the FIRST set of the next symbol contains ε, add the FOLLOW set of the
-                    // left-hand side symbol.
-                    if (hasNull || j == rhs.size()) {
-                        for (const Symbol& s : m_followSet[lhs]) {
-                            auto [_, inserted] = m_followSet[sym].insert(s);
+                    // If the FIRST set of all symbols in the right-hand side contains ε, add the
+                    // FOLLOW set of the left-hand side symbol.
+                    if (allHasEpsilon) {
+                        for (const Symbol& sym : m_followSet[lhs]) {
+                            auto [_, inserted] = m_followSet[rhsSym].insert(sym);
                             if (inserted) {
                                 updated = true;
                             }
@@ -168,56 +122,83 @@ void Syntax::calcFollowSet()
     } while (updated);
 }
 
-void Syntax::calcSelectSet()
+void Syntax::calcSelectSets()
 {
-    calcFirstSet();
-    calcFollowSet();
+    calcFirstSets();
+    calcFollowSets();
 
     m_selectSet.clear();
-    m_selectSet.resize(m_productionRules.size());
+    m_selectSet.resize(m_rules.size());
 
-    for (size_t i = 0; i < m_productionRules.size(); ++i) {
-        const ProductionRule& rule = m_productionRules[i];
-        const auto& lhs = rule.lhs;
-        const auto& rhs = rule.rhs;
+    for (size_t i = 0; i < m_rules.size(); ++i) {
+        const auto& lhs = m_rules[i].lhs;
+        const auto& rhs = m_rules[i].rhs;
 
-        if (rhs[0].empty()) {
-            // If the right-hand side is empty, add the FOLLOW set of the left-hand side symbol to
-            // the SELECT set.
-            m_selectSet[i] = m_followSet[lhs];
-        } else {
-            size_t j = 0;
-            for (; j < rhs.size(); ++j) {
-                const Symbol& sym = rhs[j];
-                if (isTerminal(sym)) {
-                    // If the symbol is a terminal, add it to the SELECT set.
-                    m_selectSet[i].insert(sym);
-                    break;
-                } else {
-                    // If the symbol is a non-terminal, add the FIRST set of the symbol to the
-                    // SELECT set.
-                    bool hasNull = false;
-                    for (const Symbol& s : m_firstSet[sym]) {
-                        if (!s.empty()) {
-                            m_selectSet[i].insert(s);
-                        } else {
-                            hasNull = true;
-                        }
-                    }
-
-                    if (!hasNull) {
-                        break;
-                    }
-                }
+        auto [firstSet, allHasEpsilon] = m_firstSetCache[i];
+        for (const Symbol& sym : firstSet) {
+            if (sym != EPSILON) {
+                m_selectSet[i].insert(sym);
             }
-
-            if (j == rhs.size()) {
-                // If the FIRST set of all symbols in the right-hand side contains ε, add the
-                // FOLLOW set of the left-hand side symbol to the SELECT set.
-                m_selectSet[i] = m_followSet[lhs];
+        }
+        if (allHasEpsilon) {
+            for (const Symbol& sym : m_followSet[lhs]) {
+                m_selectSet[i].insert(sym);
             }
         }
     }
+
+    m_firstSetCache.clear();
+}
+
+std::pair<std::set<Symbol>, bool> Syntax::calcFirstSetOfSyms(const std::vector<Symbol>& syms,
+                                                             size_t beginIdx, size_t endIdx) const
+{
+    std::set<Symbol> firstSet;
+
+    //////////////////////////////////////////////////////////////////////////
+    // If X -> ε, then add ε to FIRST(X).
+    //////////////////////////////////////////////////////////////////////////
+    if (syms[beginIdx] == EPSILON) {
+        firstSet.insert(EPSILON);
+        return {firstSet, true};
+    }
+
+    size_t i = beginIdx;
+    for (; i < endIdx; ++i) {
+        ////////////////////////////////////////////////////////////////////////////
+        // If Y1, Y2, ..., Yi-1 => ε, then add First(Y1)-{ε}, First(Y2)-{ε}, ...,
+        // First(Yi) to FIRST(X).
+        ////////////////////////////////////////////////////////////////////////////
+        if (isNonTerminal(syms[i])) {
+            bool hasEpsilon = false;
+            for (const Symbol& sym : m_firstSet.at(syms[i])) {
+                if (sym != EPSILON) {
+                    firstSet.insert(sym);
+                } else {
+                    hasEpsilon = true;
+                }
+            }
+
+            if (!hasEpsilon) {
+                break;
+            }
+        } else {
+            //////////////////////////////////////////////////////////////////////////
+            // If there is a terminal, then add it to FIRST(X) and stop the loop.
+            //////////////////////////////////////////////////////////////////////////
+            firstSet.insert(syms[i]);
+            break;
+        }
+    }
+
+    //////////////////////////////////////////////////////////////////
+    // If Yi => ε for all i = 1, 2, ..., k, then add ε to FIRST(X).
+    //////////////////////////////////////////////////////////////////
+    bool allHasEpsilon = (i == endIdx);
+    if (allHasEpsilon) {
+        firstSet.insert(EPSILON);
+    }
+    return {firstSet, allHasEpsilon};
 }
 
 void Syntax::printResults()
@@ -227,7 +208,7 @@ void Syntax::printResults()
     for (const auto& entry : m_firstSet) {
         std::cout << entry.first << ": { ";
         for (const auto& s : entry.second) {
-            if (s == "") {
+            if (s == EPSILON) {
                 std::cout << "ε ";
             } else {
                 std::cout << s << " ";
@@ -250,11 +231,11 @@ void Syntax::printResults()
 
     // Print the SELECT set
     std::cout << "SELECT set:" << std::endl;
-    for (size_t i = 0; i < m_productionRules.size(); ++i) {
-        const ProductionRule& rule = m_productionRules[i];
+    for (size_t i = 0; i < m_rules.size(); ++i) {
+        const Rule& rule = m_rules[i];
         std::cout << std::format("{} -> ", rule.lhs);
         for (const auto& s : rule.rhs) {
-            if (s.empty()) {
+            if (s == EPSILON) {
                 std::cout << "ε";
             } else {
                 std::cout << s;
@@ -262,7 +243,7 @@ void Syntax::printResults()
         }
         std::cout << ": { ";
         for (const auto& s : m_selectSet[i]) {
-            if (s.empty()) {
+            if (s == EPSILON) {
                 std::cout << "ε ";
             } else {
                 std::cout << s << " ";
@@ -279,7 +260,7 @@ void Syntax::clear()
     m_nonTerminals.clear();
     m_firstSet.clear();
     m_followSet.clear();
-    m_productionRules.clear();
+    m_rules.clear();
     m_selectSet.clear();
 }
 

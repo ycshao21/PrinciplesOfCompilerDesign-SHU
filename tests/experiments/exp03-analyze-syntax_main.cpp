@@ -12,10 +12,9 @@ void analyzeSyntax(const std::string& srcFile)
     PL0::Lexer lexer;
     std::vector<PL0::Token> tokens = lexer.tokenize(srcFile);
 
-    // PL0::Parser* parser = new PL0::RecursiveDescentParser();
-    PL0::Parser* parser = new PL0::LL1Parser();
-    parser->parse(tokens);
-    delete parser;
+    // PL0::RecursiveDescentParser parser;
+    PL0::LL1Parser parser;
+    parser.parse(tokens);
 }
 
 int main(int argc, char* argv[])

@@ -66,5 +66,9 @@ private:
             m_curIndex++;
         }
     }
+
+private:
+    std::unique_ptr<std::vector<Token>> m_tokens = nullptr;
+    size_t m_curIndex = 0;
 };
 } // namespace PL0

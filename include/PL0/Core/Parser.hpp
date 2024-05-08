@@ -13,9 +13,6 @@ public:
 
     virtual void parse(const std::vector<Token>& tokens) = 0;
 
-protected:
-    std::unique_ptr<std::vector<Token>> m_tokens = nullptr;
-    size_t m_curIndex = 0;
 };
 
 }  // namespace PL0
