@@ -4,18 +4,15 @@
 #include <set>
 #include <string>
 #include <vector>
+#include "Symbol.hpp"
 
 namespace PL0
 {
-using Symbol = std::string;
-
-constexpr Symbol EPSILON = "";
-
 struct Rule
 {
     // lhs -> rhs
-    // e.g. X -> Y1 Y2 ... Yn, where X is the left-hand side symbol,
-    // and Y1, Y2, ..., Yn are the
+    // e.g. X -> Y1 Y2 ... Yn,
+    // where X is the left-hand side symbol, and Y1, Y2, ..., Yn are the right-hand side symbols.
     Symbol lhs;
     std::vector<Symbol> rhs;
 };
@@ -73,7 +70,7 @@ public:
 private:
     // Return <FirstSetOfsyms, allHasEpsilon>
     std::pair<std::set<Symbol>, bool> calcFirstSetOfSyms(const std::vector<Symbol>& syms,
-                                                  size_t beginIdx, size_t endIdx) const;
+                                                         size_t beginIdx, size_t endIdx) const;
 
     void calcFirstSets();
     void calcFollowSets();

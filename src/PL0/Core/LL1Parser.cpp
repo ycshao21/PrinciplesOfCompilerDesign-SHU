@@ -7,8 +7,9 @@ namespace PL0
 {
 LL1Parser::LL1Parser()
 {
-    m_syntax.setBeginSym("E");
+    m_syntax.setBeginSym("S");
     // Arithmetic expression:
+    //   S -> E
     //   E -> + T E'
     //   E -> - T E'
     //   E -> T E'
@@ -25,12 +26,14 @@ LL1Parser::LL1Parser()
     //
     // where E is for expression, T is for term, F is for factor.
 
-    m_syntax.addRule("E", {"+", "T", "E'"});
-    m_syntax.addRule("E", {"-", "T", "E'"});
-    m_syntax.addRule("E", {"T", "E'"});
-    m_syntax.addRule("E'", {"+", "T", "E'"});
-    m_syntax.addRule("E'", {"-", "T", "E'"});
-    m_syntax.addRule("E'", {EPSILON});
+    m_syntax.addRule("S", {"E"});
+    m_syntax.addRule("E", {"+", "E'"});
+    m_syntax.addRule("E", {"-", "E'"});
+    m_syntax.addRule("E", {"E'"});
+    m_syntax.addRule("E'", {"T", "E''"});
+    m_syntax.addRule("E''", {"+", "T", "E''"});
+    m_syntax.addRule("E''", {"-", "T", "E''"});
+    m_syntax.addRule("E''", {EPSILON});
     m_syntax.addRule("T", {"F", "T'"});
     m_syntax.addRule("T'", {"*", "F", "T'"});
     m_syntax.addRule("T'", {"/", "F", "T'"});
@@ -42,7 +45,7 @@ LL1Parser::LL1Parser()
     m_syntax.calcSelectSets();
     generatePredictionTable();
 
-    // m_syntax.printResults();
+    m_syntax.printResults();
 }
 
 void LL1Parser::generatePredictionTable()
@@ -74,10 +77,10 @@ void LL1Parser::printTable()
         for (const auto& [sym, rule] : item) {
             std::cout << sym << " -> ";
             for (const auto& s : rule) {
-                if (!s.empty()) {
-                    std::cout << s;
-                } else {
+                if (s == EPSILON) {
                     std::cout << "ε";
+                } else {
+                    std::cout << s;
                 }
             }
             std::cout << ", ";
@@ -132,13 +135,7 @@ void LL1Parser::parse(const std::vector<Token>& tokens)
             auto itemIt = allRules.find(rtop);
             // Production rules not found
             if (itemIt == allRules.end()) {
-                // std::string symStr;
-                // for (const auto& [sym, _] : allRules) {
-                //     symStr += sym + ", ";
-                // }
-                // Reporter::error(std::format("Syntax error: expected {}but got {}.", symStr, rtop));
                 Reporter::error(std::format("Syntax error: {} is not allowed.", rtop));
-
                 return;
             }
             const auto& rule = m_table[atop][rtop];

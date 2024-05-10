@@ -57,7 +57,4 @@ inline bool isOperatorChar(char c)
 }
 
 std::string encode(const Token& token);
-
-std::string translate2Symbol(const Token& token);
-
 }  // namespace PL0

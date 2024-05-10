@@ -1,6 +1,6 @@
 #pragma once
-#include "PL0/Core/Scanner.hpp"
-#include "PL0/Core/Token.hpp"
+#include "Scanner.hpp"
+#include "Token.hpp"
 #include <vector>
 #include <memory>
 

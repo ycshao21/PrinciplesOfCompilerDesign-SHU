@@ -1,6 +1,7 @@
 #pragma once
 #include "Parser.hpp"
 #include "Syntax.hpp"
+#include "Symbol.hpp"
 
 namespace PL0
 {

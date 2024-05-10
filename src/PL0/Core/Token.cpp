@@ -61,27 +61,4 @@ std::string encode(const Token& token)
     }
     return "nul";
 }
-
-std::string translate2Symbol(const Token& token)
-{
-    switch (token.type) {
-    case TokenType::Keyword: {
-        return token.value;
-    }
-    case TokenType::Identifier: {
-        return "id";
-    }
-    case TokenType::Number: {
-        return "num";
-    }
-    case TokenType::Operator: {
-        return token.value;
-    }
-    case TokenType::Delimiter: {
-        return token.value;
-    }
-    }
-    return "nul";
-}
-
 }  // namespace PL0

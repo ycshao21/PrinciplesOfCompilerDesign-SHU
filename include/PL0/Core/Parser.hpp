@@ -1,5 +1,5 @@
 #pragma once
-#include "PL0/Core/Token.hpp"
+#include "Token.hpp"
 #include <vector>
 #include <memory>
 
@@ -12,7 +12,6 @@ public:
     virtual ~Parser() = default;
 
     virtual void parse(const std::vector<Token>& tokens) = 0;
-
 };
 
 }  // namespace PL0
