@@ -1,13 +1,13 @@
 #pragma once
 #include "Parser.hpp"
-#include "Syntax.hpp"
+#include "RuleAnalyzer.hpp"
 #include "Symbol.hpp"
 
 namespace PL0
 {
 class LL1Parser : public Parser
 {
-    using Table = std::map<Symbol, std::map<Symbol, std::vector<Symbol>>>;
+    using PredictionTable = std::map<Symbol, std::map<Symbol, std::vector<Symbol>>>;
 
 public:
     LL1Parser();
@@ -15,13 +15,16 @@ public:
     virtual void parse(const std::vector<Token>& tokens) override;
 
 private:
+    void initSyntax();
     void generatePredictionTable();
 
-    void printTable();
+private:
+    void printPredictionTable();
+    void printState(const std::vector<Symbol>& analysisStack, const std::vector<Symbol>& restInput);
 
 private:
-    Syntax m_syntax;
-    Table m_table;
+    RuleAnalyzer m_analyzer;
+    PredictionTable m_predictionTable;
 };
 
 }  // namespace PL0

@@ -1,10 +1,245 @@
 #include "PL0/Core/SemanticLL1Parser.hpp"
+#include "PL0/Utils/Exception.hpp"
 #include "PL0/Utils/Reporter.hpp"
 #include <format>
 
 namespace PL0
 {
 SemanticLL1Parser::SemanticLL1Parser()
+{
+    initSyntax();
+}
+
+void SemanticLL1Parser::addRule(const Symbol& lhs, const std::vector<Symbol>& rhs, int indexOffset)
+{
+    m_rhsWithActions.push_back(rhs);
+
+    // Remove all the actions on the right-hand side of the rule,
+    // then pass the rule to the syntax processor.
+    std::vector<Symbol> rhsCopy;
+    for (const Symbol& sym : rhs) {
+        // If a symbol begins with a digit, it is an action.
+        if (!std::isdigit(sym[0])) {
+            rhsCopy.push_back(sym);
+        }
+    }
+    m_analyzer.addRule(lhs, rhsCopy);
+
+    // Add the index offset
+    m_indexOffsets.push_back(indexOffset);
+}
+
+void SemanticLL1Parser::setActionFunc(const std::string& index, const ActionFunc& func)
+{
+    if (m_actionFuncs.find(index) != m_actionFuncs.end()) {
+        throw std::runtime_error(std::format("Action {} already exists", index));
+    }
+    m_actionFuncs[index] = func;
+}
+
+void SemanticLL1Parser::generateTables()
+{
+    const auto& rules = m_analyzer.getRules();
+    for (size_t i = 0; i < rules.size(); ++i) {
+        const Symbol& lhs = rules[i].lhs;
+        const std::set<Symbol>& selectSet = m_analyzer.getSelectSet(i);
+
+        for (const Symbol& sym : selectSet) {
+            m_predictionTable[lhs][sym] = m_rhsWithActions[i];
+            m_indexOffsetTable[lhs][sym] = m_indexOffsets[i];
+        }
+    }
+}
+
+void SemanticLL1Parser::parse(const std::vector<Token>& tokens)
+{
+    // Rest input
+    // e.g. 3 + 5 * 2  =>  3 + 5 * 2 #
+    //                      ------->
+    std::vector<std::string> restInput{ENDSYM};
+    for (auto it = tokens.rbegin(); it != tokens.rend(); ++it) {
+        // [NOTE] Numbers and identifiers are not translated to "num" and "id" here,
+        //        because the value of numbers are needed in the semantic actions.
+        //        The translation is done in the semantic actions.
+        restInput.push_back(it->value);
+    }
+
+    // Analysis stack
+    // Initial state (The bottom is at index 0):
+    // ----------------
+    // |  #  Ssyn  S      <---
+    // ----------------
+    std::vector<Element> analysisStack{Element(ENDSYM), Element(m_analyzer.getBeginSym(), true),
+                                       Element(m_analyzer.getBeginSym())};
+
+    try {
+        // Translate the value of the input token to a symbol.
+        Symbol rtopSym = translate2Symbol(restInput.back());
+
+        while (!analysisStack.empty() && !restInput.empty()) {
+            // printState(analysisStack, restInput);
+            size_t atopIndex = analysisStack.size() - 1;
+            const Element& atop = analysisStack.back();
+            if (atop.type == SymbolType::TERMINAL || atop.type == SymbolType::ENDSYM) {
+                // If these two symbols do not match, throw a syntax error.
+                if (atop.symbol != rtopSym) {
+                    throw SyntaxError(
+                        std::format("Syntax error: The terminal symbol {} does not match "
+                                    "the top of the input stack {}.",
+                                    atop.symbol, rtopSym));
+                }
+
+                // If the top is an identifier, throw a semantic error.
+                if (atop.symbol == "id") {
+                    throw SemanticError(
+                        "Semantic error: Identifier is not allowed in the expression.");
+                }
+
+                ///////////////////////
+                //    Top matched.   //
+                ///////////////////////
+
+                if (atop.symbol == "num") {
+                    // Fetch the value of the number.
+                    int num = std::stoi(restInput.back());
+
+                    // Assign the value of the number to the new top.
+                    // [NOTE] The new top is certainly an action: { F.val = num.val },
+                    //        because only F -> num can produce a terminal symbol "num".
+                    //        And it is safe to access analysisStack[atopIndex - 1].
+                    Element& newAtop = analysisStack[atopIndex - 1];
+                    newAtop.values.push_back(num);
+                }
+
+                // Pop analysis stack and rest input.
+                analysisStack.pop_back();
+                restInput.pop_back();
+
+                // Update the top symbol of the rest input.
+                if (!restInput.empty()) {
+                    rtopSym = translate2Symbol(restInput.back());
+                }
+            } else if (atop.type == SymbolType::NON_TERMINAL) {
+                //////////////////////////////////////////////////////////////////////
+                // Replace the top non-terminal symbol X with the corresponding rule.
+                //////////////////////////////////////////////////////////////////////
+
+                // If there is no such rule, throw a syntax error.
+                const auto& allRules = m_predictionTable[atop.symbol];
+                if (allRules.find(rtopSym) == allRules.end()) {  // Not found
+                    throw SyntaxError(std::format("Syntax error: {} is not allowed.", rtopSym));
+                }
+                const auto& rule = m_predictionTable[atop.symbol][rtopSym];
+
+                // 1) Pop X
+                Element oldAtop = atop;
+                analysisStack.pop_back();
+
+                // 2) Push the symbols of the rule in reverse order.
+                for (auto it = rule.rbegin(); it != rule.rend(); ++it) {
+                    if (*it != EPSILON) {  // Ignore ε
+                        // If the symbol Y is a non-terminal,
+                        // an additional synthesized attribute Ysyn should be pushed before Y.
+                        //  ---------------------
+                        //  |  ...  <-- Ysyn  Y
+                        //  ---------------------
+                        if (m_analyzer.isNonTerminal(*it)) {
+                            analysisStack.push_back(Element(*it, true));   // Ysyn
+                            analysisStack.push_back(Element(*it, false));  // Y
+                        } else {
+                            analysisStack.push_back(Element(*it, false));
+                        }
+                    }
+                }
+
+                // 3) Assign the value of X to the ACTION that needs it.
+                // [NOTE] It is guaranteed that non-terminal symbols have at most one value.
+                if (oldAtop.values.size() == 1) {
+                    // [NOTE] The index of the ACTION is stored in m_indexOffsetTable.
+                    //        It is safe to access m_indexOffsetTable[oldAtop.symbol][rtopSym],
+                    //        because the rule is found in the prediction table.
+                    int indexOffset = m_indexOffsetTable[oldAtop.symbol][rtopSym];
+                    if (indexOffset != NO_VALUE) {
+                        Element& e = analysisStack[atopIndex + indexOffset];
+                        e.values.push_back(oldAtop.values[0]);
+                    }
+                }
+            } else if (atop.type == SymbolType::SYNTHESIZED) {
+                ////////////////////////////////////////////////////////////////////////////////////
+                // Assign the value of the synthesized attribute to the following action and pop it.
+                ////////////////////////////////////////////////////////////////////////////////////
+
+                // [NOTE] It is guaranteed that a synthesized attribute has at most one value.
+                // For the following symbol of the synthesized attribute, there are two cases:
+                // - Action (Esyn in this case):
+                //     ------------------------
+                //     | ... Ssyn {0} Esyn ...
+                //     ------------------------
+                // - End symbol (Ssyn in this case):
+                //     ---------------------
+                //     | # Ssyn {0} ...
+                //     ---------------------
+                // For the latter case, the value of the synthesized attribute is not needed.
+
+                if (atop.values.size() == 1) {
+                    auto it =
+                        std::find_if(analysisStack.rbegin(), analysisStack.rend(),
+                                     [](const Element& e) { return e.type == SymbolType::ACTION; });
+
+                    if (it != analysisStack.rend()) {
+                        it->values.push_back(atop.values[0]);
+                    }
+                }
+                analysisStack.pop_back();
+            } else if (atop.type == SymbolType::ACTION) {
+                // For the following symbol of the action, there are three cases:
+                // - Synthesized attribute ({0} and {3} in this case):
+                //      -----------------------------------
+                //      | ... Ssyn {0} Esyn {3} E'syn ....
+                //      -----------------------------------
+                // - Non-terminal symbol ({11} in this case):
+                //      ----------------------------------
+                //      | ... Tsyn {12} T'syn T' {11} ...
+                //      ----------------------------------
+                // - ')' ({18} in this case):
+                //      -----------------------------
+                //      | ... {11} Fsyn ) {18} Esyn
+                //      -----------------------------
+
+                // Find the nearest synthesized attribute or non-terminal symbol.
+                auto it = std::find_if(analysisStack.rbegin(), analysisStack.rend(),
+                                       [](const Element& e) {
+                                           return e.type == SymbolType::SYNTHESIZED ||
+                                                  e.type == SymbolType::NON_TERMINAL;
+                                       });
+                if (it == analysisStack.rend()) {
+                    throw SyntaxError("Syntax error: Missing synthesized attribute or non-terminal "
+                                      "symbol after the action.");
+                }
+
+                // Perform the semantic action.
+                ActionFunc& action = m_actionFuncs[atop.symbol];
+                int result = action(atop.values);
+                analysisStack.pop_back();
+
+                // Assign the result to the symbol.
+                it->values.push_back(result);
+            } else {
+                throw SyntaxError("Unknown symbol type.");
+            }
+        }
+    } catch (const SyntaxError& e) {
+        Reporter::error(e.what());
+        return;
+    } catch (const SemanticError& e) {
+        Reporter::error(e.what());
+        return;
+    }
+
+    Reporter::info("Syntax correct.");
+}
+
+void SemanticLL1Parser::initSyntax()
 {
     // Arithmetic expression:
     //   S -> E {0}                 {0} : print(E.val)
@@ -26,7 +261,7 @@ SemanticLL1Parser::SemanticLL1Parser()
     //
     // where E is for expression, T is for term, F is for factor.
 
-    m_syntax.setBeginSym("S");
+    m_analyzer.setBeginSym("S");
     addRule("S", {"E", "0"});
     addRule("E", {"+", "E'", "1"});
     addRule("E", {"-", "E'", "2"});
@@ -42,288 +277,36 @@ SemanticLL1Parser::SemanticLL1Parser()
     addRule("F", {"(", "E", "18", ")"});
     addRule("F", {"id", "19"});
     addRule("F", {"num", "20"});
-    m_syntax.calcSelectSets();
+
+    m_analyzer.calcSelectSets();
+    generateTables();
 
     // Semantic actions
-    setAction("0", printAns, {"E"});
-    setAction("1", assign, {"E'"});
-    setAction("2", opposite, {"E'"});
-    setAction("3", assign, {"E'"});
-    setAction("4", assign, {"T"});
-    setAction("5", assign, {"E''"});
-    setAction("6", add, {"E''", "T"});
-    setAction("7", assign, {"E''"});
-    setAction("8", sub, {"E''", "T"});
-    setAction("9", assign, {"E''"});
-    setAction("10", assign, {"E''"});
-    setAction("11", assign, {"F"});
-    setAction("12", assign, {"T'"});
-    setAction("13", mul, {"T'", "F"});
-    setAction("14", assign, {"T'"});
-    setAction("15", div, {"T'", "F"});
-    setAction("16", assign, {"T'"});
-    setAction("17", assign, {"T'"});
-    setAction("18", assign, {"E"});
-    setAction("19", assign, {"id"});
-    setAction("20", assign, {"num"});
-
-    generateTables();
-    // printTable();
+    setActionFunc("0", Action::print);
+    setActionFunc("1", Action::assign);
+    setActionFunc("2", Action::opposite);
+    setActionFunc("3", Action::assign);
+    setActionFunc("4", Action::assign);
+    setActionFunc("5", Action::assign);
+    setActionFunc("6", Action::add);
+    setActionFunc("7", Action::assign);
+    setActionFunc("8", Action::sub);
+    setActionFunc("9", Action::assign);
+    setActionFunc("10", Action::assign);
+    setActionFunc("11", Action::assign);
+    setActionFunc("12", Action::assign);
+    setActionFunc("13", Action::mul);
+    setActionFunc("14", Action::assign);
+    setActionFunc("15", Action::div);
+    setActionFunc("16", Action::assign);
+    setActionFunc("17", Action::assign);
+    setActionFunc("18", Action::assign);
+    setActionFunc("19", Action::assign);
+    setActionFunc("20", Action::assign);
 }
 
-void SemanticLL1Parser::addRule(const Symbol& lhs, const std::vector<Symbol>& rhs, int indexOffset)
+void SemanticLL1Parser::printPredictionTable()
 {
-    m_rhsWithActions.push_back(rhs);
-
-    // Remove all the actions on the right-hand side of the rule,
-    // then pass the rule to the syntax processor.
-    std::vector<Symbol> rhsCopy;
-    for (const Symbol& sym : rhs) {
-        // If a symbol begins with a digit, it is an action.
-        if (!std::isdigit(sym[0])) {
-            rhsCopy.push_back(sym);
-        }
-    }
-    m_syntax.addRule(lhs, rhsCopy);
-
-    // Add the index offset
-    m_indexOffsets.push_back(indexOffset);
-}
-
-void SemanticLL1Parser::setAction(const std::string& index,
-                                  const std::function<int(const std::vector<Operand>&)>& func,
-                                  const std::vector<std::string>& operandNames)
-{
-    m_actions[index] = Action{func, {}};
-    for (const std::string& name : operandNames) {
-        m_actions[index].operands.push_back({name, {}});
-    }
-}
-
-void SemanticLL1Parser::generateTables()
-{
-    const auto& rules = m_syntax.getRules();
-    for (size_t i = 0; i < rules.size(); ++i) {
-        const Symbol& lhs = rules[i].lhs;
-        const std::set<Symbol>& selectSet = m_syntax.getSelectSet(i);
-
-        for (const Symbol& sym : selectSet) {
-            m_predictionTable[lhs][sym] = m_rhsWithActions[i];
-            m_indexOffsetTable[lhs][sym] = m_indexOffsets[i];
-        }
-    }
-}
-
-void SemanticLL1Parser::parse(const std::vector<Token>& tokens)
-{
-    // Rest input
-    // e.g. 3 + 5 * 2  =>  3 + 5 * 2 #
-    //                      ------->
-    std::vector<std::string> restInput;
-    restInput.push_back("#");
-
-    for (auto it = tokens.rbegin(); it != tokens.rend(); ++it) {
-        // [NOTE] Numbers and identifiers are not translated to "num" and "id" here,
-        //        because the value of numbers are needed in the semantic actions.
-        //        The translation is done in the semantic actions.
-        restInput.push_back(it->value);
-    }
-
-    // Analysis stack
-    // Initial state (The bottom is at index 0):
-    // ----------------
-    // |  #  Ssyn  S
-    // ----------------
-    std::vector<Element> analysisStack{Element("#"), Element("S", true), Element("S")};
-
-    try {
-        while (!analysisStack.empty() && !restInput.empty()) {
-            // printState(analysisStack, restInput);
-
-            size_t atopIndex = analysisStack.size() - 1;
-            const Element& atop = analysisStack.back();
-
-            std::string rtopValue = restInput.back();
-            Symbol rtopSym = translate2Symbol(rtopValue);
-
-            if (atop.type == SymbolType::TERMINAL || atop.type == SymbolType::ENDSYM) {
-                // Reporter::info("Terminal || EndSym");
-
-                // If these two symbols do not match, throw a syntax error.
-                if (atop.symbol != rtopSym) {
-                    throw std::runtime_error(
-                        std::format("Syntax error: The terminal symbol {} does not match "
-                                    "the top of the input stack {}.",
-                                    atop.symbol, rtopSym));
-                }
-
-                // If there is an identifier in the expression, throw a semantic error.
-                if (atop.symbol == "id") {
-                    throw std::runtime_error(
-                        "Semantic error: Identifier is not allowed in the expression, "
-                        "because its value is not defined.");
-                }
-
-                ///////////////////////
-                //    Top matched.   //
-                ///////////////////////
-
-                if (atop.symbol == "num") {
-                    // Assign the value of the number to the new top,
-                    // which is an action: { F.val = num.val }.
-                    // [NOTE] It is guaranteed that analysisStack.size() >= 1 in this case,
-                    //        so it is safe to access analysisStack[atopIndex - 1].
-                    int num = std::stoi(rtopValue);
-                    Element& newAtop = analysisStack[atopIndex - 1];
-                    Action& action = newAtop.action.value();
-                    action.operands[0].second = num;
-                }
-                analysisStack.pop_back();
-                restInput.pop_back();
-            } else if (atop.type == SymbolType::NON_TERMINAL) {
-                ////////////////////////////////////////////////////
-                // Find the production rule in the prediction table.
-                ////////////////////////////////////////////////////
-
-                // Reporter::info("Non-terminal");
-
-                // If there is no such rule, throw a syntax error.
-                const auto& allRules = m_predictionTable[atop.symbol];
-                if (allRules.find(rtopSym) == allRules.end()) {  // Not found
-                    throw std::runtime_error(
-                        std::format("Syntax error: {} is not allowed.", rtopSym));
-                }
-                const auto& rule = m_predictionTable[atop.symbol][rtopSym];
-
-                ////////////////////////////////////////////////////////
-                // Replace the top non-terminal symbol X with the rule.
-                ////////////////////////////////////////////////////////
-
-                // Pop the top element
-                Element oldAtop = atop;
-                analysisStack.pop_back();
-
-                // Push the symbols in the rule in reverse order.
-                for (auto it = rule.rbegin(); it != rule.rend(); ++it) {
-                    if (!it->empty()) {  // Ignore ε
-                        // If the symbol Y is a non-terminal,
-                        // an additional synthesized attribute Ysyn should be pushed before Y.
-                        //  ---------------------
-                        //  |  ...  <-- Ysyn  Y
-                        //  ---------------------
-                        if (m_syntax.isNonTerminal(*it)) {
-                            analysisStack.push_back(Element(*it, true));   // Ysyn
-                            analysisStack.push_back(Element(*it, false));  // Y
-                        } else if (std::isdigit((*it)[0])) {               // Action
-                            analysisStack.push_back(Element(*it, false, m_actions[*it]));
-                        } else {
-                            analysisStack.push_back(Element(*it, false));
-                        }
-                    }
-                }
-
-                ///////////////////////////////////////////////////////////////
-                // Assign the value of X to the specific position (if exists).
-                ///////////////////////////////////////////////////////////////
-                if (oldAtop.value.has_value()) {
-                    auto indexOffset = m_indexOffsetTable[oldAtop.symbol][rtopSym];
-                    Element& e = analysisStack[atopIndex + indexOffset];
-                    if (e.type == SymbolType::ACTION) {  // T' -> ε
-                        e.action->operands[0].second = oldAtop.value;
-                    } else {
-                        // [NOTE] It is guaranteed that the synthesized attribute is followed by a
-                        // non-terminal symbol.
-                        analysisStack[atopIndex + indexOffset + 1].value =
-                            oldAtop.value;  // { E'.syn = E''.syn
-                    }
-                }
-            } else if (atop.type == SymbolType::SYNTHESIZED) {
-                // Reporter::info("Synthesized");
-
-                //////////////////////////////////////////////////////////////////////////
-                // Assign the value of the synthesized attribute to the following action.
-                //////////////////////////////////////////////////////////////////////////
-
-                // [NOTE] It is guaranteed that a synthesized attribute is followed by either an
-                // action,
-                //        or an end symbol.
-                //        For the latter case, the synthesized attribute is not needed.
-                auto it =
-                    std::find_if(analysisStack.rbegin(), analysisStack.rend(),
-                                 [](const Element& e) { return e.type == SymbolType::ACTION; });
-
-                if (it != analysisStack.rend()) {
-                    Action& firstAction = it->action.value();
-
-                    // Check if the operand required by the action matches the synthesized
-                    // attribute.
-                    auto operand = std::find_if(
-                        firstAction.operands.begin(), firstAction.operands.end(),
-                        [&atop](const Operand& op) { return op.first == atop.symbol; });
-
-                    if (operand == firstAction.operands.end()) {
-                        throw std::runtime_error(
-                            std::format("Semantic error: The synthesized attribute {} is "
-                                        "not needed in the action {}.",
-                                        atop.symbol, it->symbol));
-                    }
-
-                    // Check if the synthesized attribute is already assigned a value.
-                    if (operand->second.has_value()) {
-                        throw std::runtime_error(
-                            std::format("Semantic error: The synthesized attribute {} is "
-                                        "already assigned a value in the action {}.",
-                                        atop.symbol, it->symbol));
-                    }
-
-                    // Assign the value.
-                    operand->second = atop.value;
-                }
-                analysisStack.pop_back();
-
-            } else if (atop.type == SymbolType::ACTION) {
-                // Reporter::info("Action");
-
-                // Check if the action is followed by a synthesized attribute or a non-terminal
-                // symbol.
-                auto it = std::find_if(analysisStack.rbegin(), analysisStack.rend(),
-                                       [](const Element& e) {
-                                           return e.type == SymbolType::SYNTHESIZED ||
-                                                  e.type == SymbolType::NON_TERMINAL;
-                                       });
-
-                // Check if the required operands are all filled.
-                const Action& action = atop.action.value();
-                if (!action.isAllOperandFilled()) {
-                    throw std::runtime_error(std::format(
-                        "Semantic error: The action {} is not fully filled.", atop.symbol));
-                }
-
-                ////////////////////////////////
-                // Perform the semantic action.
-                ////////////////////////////////
-                it->value = action.execute();
-                analysisStack.pop_back();
-            } else {
-                throw std::runtime_error("Unknown symbol type.");
-            }
-        }
-    } catch (const std::exception& e) {
-        Reporter::error(e.what());
-        return;
-    }
-
-    Reporter::info("Syntax correct.");
-}
-
-void SemanticLL1Parser::printTable()
-{
-    // E -- ( -> TE', id -> TE', num -> TE',
-    // E' -- # -> ε, ) -> ε, + -> +TE', - -> -TE',
-    // F -- ( -> (E), id -> id, num -> num,
-    // T -- ( -> FT', id -> FT', num -> FT',
-    // T' -- # -> ε, ) -> ε, * -> *FT', + -> ε, - -> ε, / -> /FT',
-
     for (const auto& [lhs, item] : m_predictionTable) {
         std::cout << lhs << " -- ";
         for (const auto& [selectSym, rhs] : item) {
@@ -359,17 +342,8 @@ void SemanticLL1Parser::printState(const std::vector<Element>& analysisStack,
     std::cout << "\n";
 
     auto& top = analysisStack.back();
-    if (top.type == SymbolType::ACTION) {
-        for (const auto& operand : top.action.value().operands) {
-            if (operand.second.has_value()) {
-                std::cout << "Operand: " << operand.first << " = " << operand.second.value()
-                          << "\n";
-            }
-        }
-    } else {
-        if (top.value.has_value()) {
-            std::cout << "Value: " << top.value.value() << "\n";
-        }
+    for (const auto& v : top.values) {
+        std::cout << "Value: " << v << "\n";
     }
 
     std::cout << "Rest input: ";

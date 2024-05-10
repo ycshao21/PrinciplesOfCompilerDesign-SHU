@@ -10,14 +10,12 @@ namespace PL0
 {
 struct Rule
 {
-    // lhs -> rhs
     // e.g. X -> Y1 Y2 ... Yn,
-    // where X is the left-hand side symbol, and Y1, Y2, ..., Yn are the right-hand side symbols.
-    Symbol lhs;
-    std::vector<Symbol> rhs;
+    Symbol lhs;  // X
+    std::vector<Symbol> rhs; // Y1, Y2, ..., Yn
 };
 
-class Syntax
+class RuleAnalyzer
 {
 public:
     void addRule(const Symbol& lhs, const std::vector<Symbol>& rhs);
@@ -79,11 +77,16 @@ private:
     Symbol m_beginSym;
     std::set<Symbol> m_terminals;
     std::set<Symbol> m_nonTerminals;
+
+    // Use index to access rule and select set.
     std::vector<Rule> m_rules;
-    std::map<Symbol, std::set<Symbol>> m_firstSet;
-    std::map<Symbol, std::set<Symbol>> m_followSet;
     std::vector<std::set<Symbol>> m_selectSet;
 
+    std::map<Symbol, std::set<Symbol>> m_firstSet;
+    std::map<Symbol, std::set<Symbol>> m_followSet;
+
+    // Save the result of FIRST set for SELECT set calculation.
+    // Element: <FirstSetOfsyms, allHasEpsilon>
     mutable std::vector<std::pair<std::set<Symbol>, bool>> m_firstSetCache;
 };
 

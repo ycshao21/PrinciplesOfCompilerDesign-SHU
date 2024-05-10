@@ -1,4 +1,5 @@
 #include "PL0/Core/LL1Parser.hpp"
+#include "PL0/Utils/Exception.hpp"
 #include "PL0/Utils/Reporter.hpp"
 #include <format>
 #include <stack>
@@ -7,7 +8,95 @@ namespace PL0
 {
 LL1Parser::LL1Parser()
 {
-    m_syntax.setBeginSym("S");
+    initSyntax();
+}
+
+void LL1Parser::generatePredictionTable()
+{
+    const auto& rules = m_analyzer.getRules();
+    for (size_t i = 0; i < rules.size(); ++i) {
+        const auto& rule = rules[i];
+        const Symbol& lhs = rule.lhs;
+        const std::set<Symbol>& selectSet = m_analyzer.getSelectSet(i);
+
+        for (const Symbol& sym : selectSet) {
+            m_predictionTable[lhs][sym] = rule.rhs;
+        }
+    }
+}
+
+void LL1Parser::parse(const std::vector<Token>& tokens)
+{
+    // Rest input
+    // e.g. a + 5 * b  =>  a + 5 * b #
+    //                      ------->
+    std::vector<Symbol> restInput{ENDSYM};
+    for (auto it = tokens.rbegin(); it != tokens.rend(); ++it) {
+        Symbol symbol = translate2Symbol(*it);
+        restInput.push_back(symbol);
+    }
+
+    // Analysis stack
+    // Initial state (The bottom is at index 0):
+    // ----------------
+    // |  #  S      <---
+    // ----------------
+    std::vector<Symbol> analysisStack{ENDSYM, m_analyzer.getBeginSym()};
+
+    try {
+        while (!analysisStack.empty() && !restInput.empty()) {
+            Symbol atop = analysisStack.back();
+            Symbol rtop = restInput.back();
+
+            if (m_analyzer.isTerminal(atop) || atop == ENDSYM) {
+                if (atop != rtop) {
+                    throw SyntaxError(
+                        std::format("Syntax error: The terminal symbol {} does not match "
+                                    "the top of the input stack {}.",
+                                    atop, rtop));
+                }
+
+                ///////////////////////
+                //    Top matched.   //
+                ///////////////////////
+
+                // Pop analysis stack and rest input.
+                analysisStack.pop_back();
+                restInput.pop_back();
+            } else {
+                //////////////////////////////////////////////////////////////////////
+                // Replace the top non-terminal symbol X with the corresponding rule.
+                //////////////////////////////////////////////////////////////////////
+
+                // If there is no such rule, throw a syntax error.
+                const auto& allRules = m_predictionTable[atop];
+                if (allRules.find(rtop) == allRules.end()) {
+                    throw SyntaxError(std::format(
+                        "Syntax error: No production rules found for {} -> {}.", atop, rtop));
+                }
+                const auto& rule = m_predictionTable[atop][rtop];
+
+                // 1) Pop X
+                analysisStack.pop_back();
+
+                // 2) Push the symbols of the rule in reverse order.
+                for (auto it = rule.rbegin(); it != rule.rend(); ++it) {
+                    if (!it->empty()) {
+                        analysisStack.push_back(*it);
+                    }
+                }
+            }
+        }
+    } catch (const SyntaxError& e) {
+        Reporter::error(e.what());
+        return;
+    }
+
+    Reporter::info("Syntax correct.");
+}
+
+void LL1Parser::initSyntax()
+{
     // Arithmetic expression:
     //   S -> E
     //   E -> + T E'
@@ -26,53 +115,32 @@ LL1Parser::LL1Parser()
     //
     // where E is for expression, T is for term, F is for factor.
 
-    m_syntax.addRule("S", {"E"});
-    m_syntax.addRule("E", {"+", "E'"});
-    m_syntax.addRule("E", {"-", "E'"});
-    m_syntax.addRule("E", {"E'"});
-    m_syntax.addRule("E'", {"T", "E''"});
-    m_syntax.addRule("E''", {"+", "T", "E''"});
-    m_syntax.addRule("E''", {"-", "T", "E''"});
-    m_syntax.addRule("E''", {EPSILON});
-    m_syntax.addRule("T", {"F", "T'"});
-    m_syntax.addRule("T'", {"*", "F", "T'"});
-    m_syntax.addRule("T'", {"/", "F", "T'"});
-    m_syntax.addRule("T'", {EPSILON});
-    m_syntax.addRule("F", {"(", "E", ")"});
-    m_syntax.addRule("F", {"id"});
-    m_syntax.addRule("F", {"num"});
+    m_analyzer.setBeginSym("S");
+    m_analyzer.addRule("S", {"E"});
+    m_analyzer.addRule("E", {"+", "E'"});
+    m_analyzer.addRule("E", {"-", "E'"});
+    m_analyzer.addRule("E", {"E'"});
+    m_analyzer.addRule("E'", {"T", "E''"});
+    m_analyzer.addRule("E''", {"+", "T", "E''"});
+    m_analyzer.addRule("E''", {"-", "T", "E''"});
+    m_analyzer.addRule("E''", {EPSILON});
+    m_analyzer.addRule("T", {"F", "T'"});
+    m_analyzer.addRule("T'", {"*", "F", "T'"});
+    m_analyzer.addRule("T'", {"/", "F", "T'"});
+    m_analyzer.addRule("T'", {EPSILON});
+    m_analyzer.addRule("F", {"(", "E", ")"});
+    m_analyzer.addRule("F", {"id"});
+    m_analyzer.addRule("F", {"num"});
 
-    m_syntax.calcSelectSets();
+    m_analyzer.calcSelectSets();
     generatePredictionTable();
 
-    m_syntax.printResults();
+    // m_analyzer.printResults();
 }
 
-void LL1Parser::generatePredictionTable()
+void LL1Parser::printPredictionTable()
 {
-    const auto& rules = m_syntax.getRules();
-    for (size_t i = 0; i < rules.size(); ++i) {
-        const auto& rule = rules[i];
-        const Symbol& lhs = rule.lhs;
-        const std::set<Symbol>& selectSet = m_syntax.getSelectSet(i);
-
-        for (const Symbol& sym : selectSet) {
-            m_table[lhs][sym] = rule.rhs;
-        }
-    }
-
-    // printTable();
-}
-
-void LL1Parser::printTable()
-{
-    // E -- ( -> TE', id -> TE', num -> TE',
-    // E' -- # -> ε, ) -> ε, + -> +TE', - -> -TE',
-    // F -- ( -> (E), id -> id, num -> num,
-    // T -- ( -> FT', id -> FT', num -> FT',
-    // T' -- # -> ε, ) -> ε, * -> *FT', + -> ε, - -> ε, / -> /FT',
-
-    for (const auto& [lhs, item] : m_table) {
+    for (const auto& [lhs, item] : m_predictionTable) {
         std::cout << lhs << " -- ";
         for (const auto& [sym, rule] : item) {
             std::cout << sym << " -> ";
@@ -89,68 +157,21 @@ void LL1Parser::printTable()
     }
 }
 
-void LL1Parser::parse(const std::vector<Token>& tokens)
+void LL1Parser::printState(const std::vector<Symbol>& analysisStack,
+                           const std::vector<Symbol>& restInput)
 {
-    std::vector<Symbol> restInput;
-    restInput.push_back("#");
-    for (auto it = tokens.rbegin(); it != tokens.rend(); ++it) {
-        Symbol symbol = translate2Symbol(*it);
-        restInput.push_back(symbol);
+    std::cout << "Analysis stack: ";
+    for (const auto& sym : analysisStack) {
+        std::cout << sym << " ";
     }
+    std::cout << "\n";
 
-    std::vector<Symbol> analysisStack;
-    analysisStack.push_back("#");
-    analysisStack.push_back(m_syntax.getBeginSym());
-
-    while (!analysisStack.empty() && !restInput.empty()) {
-        Symbol atop = analysisStack.back();
-        Symbol rtop = restInput.back();
-
-        std::cout << "Analysis stack: ";
-        for (const auto& sym : analysisStack) {
-            std::cout << sym << " ";
-        }
-        std::cout << "\n";
-
-        std::cout << "Rest input: ";
-        for (auto it = restInput.rbegin(); it != restInput.rend(); ++it) {
-            std::cout << *it << " ";
-        }
-        std::cout << "\n";
-        std::cout << "--------------------------------------------------------------------------\n";
-
-        if (m_syntax.isTerminal(atop) || atop == "#")
-        {
-            if (atop != rtop) {
-                Reporter::error(std::format("Syntax error: The terminal symbol {} does not match "
-                                            "the top of the input stack {}.",
-                                            atop, rtop));
-                return;
-            }
-            // Match terminal symbol
-            analysisStack.pop_back();
-            restInput.pop_back();
-        } else {
-            const auto& allRules = m_table[atop];
-            auto itemIt = allRules.find(rtop);
-            // Production rules not found
-            if (itemIt == allRules.end()) {
-                Reporter::error(std::format("Syntax error: {} is not allowed.", rtop));
-                return;
-            }
-            const auto& rule = m_table[atop][rtop];
-
-            // Replace the top of the analysis stack with the right-hand side of the rule.
-            analysisStack.pop_back();
-            for (auto it = rule.rbegin(); it != rule.rend(); ++it) {
-                if (!it->empty()) {
-                    analysisStack.push_back(*it);
-                }
-            }
-        }
+    std::cout << "Rest input: ";
+    for (auto it = restInput.rbegin(); it != restInput.rend(); ++it) {
+        std::cout << *it << " ";
     }
-
-    Reporter::info("Syntax correct.");
+    std::cout << "\n";
+    std::cout << "--------------------------------------------------------------------------\n";
 }
 
 }  // namespace PL0

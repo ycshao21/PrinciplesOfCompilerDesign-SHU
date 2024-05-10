@@ -7,8 +7,6 @@
 
 #include "PL0.hpp"
 
-#include <functional>
-
 void analyzeSemantics(const std::string& srcFile)
 {
     PL0::Lexer lexer;

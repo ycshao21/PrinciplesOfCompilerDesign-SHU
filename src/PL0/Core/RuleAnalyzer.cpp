@@ -1,11 +1,11 @@
-#include "PL0/Core/Syntax.hpp"
+#include "PL0/Core/RuleAnalyzer.hpp"
 #include <format>
 #include <iostream>
 #include <ranges>
 
 namespace PL0
 {
-void Syntax::addRule(const Symbol& lhs, const std::vector<Symbol>& rhs)
+void RuleAnalyzer::addRule(const Symbol& lhs, const std::vector<Symbol>& rhs)
 {
     Rule rule{lhs, rhs};
     m_rules.push_back(rule);
@@ -34,7 +34,7 @@ void Syntax::addRule(const Symbol& lhs, const std::vector<Symbol>& rhs)
     }
 }
 
-void Syntax::calcFirstSets()
+void RuleAnalyzer::calcFirstSets()
 {
     m_firstSet.clear();
 
@@ -71,7 +71,7 @@ void Syntax::calcFirstSets()
     } while (updated);
 }
 
-void Syntax::calcFollowSets()
+void RuleAnalyzer::calcFollowSets()
 {
     m_followSet.clear();
 
@@ -81,7 +81,7 @@ void Syntax::calcFollowSets()
     ///////////////////////////////////////////////////
     // Add # to the FOLLOW set of the begin symbol.
     ///////////////////////////////////////////////////
-    m_followSet[m_beginSym].insert("#");
+    m_followSet[m_beginSym].insert(ENDSYM);
 
     // Keep iterating until no more symbols can be added to the FOLLOW set.
     bool updated;
@@ -122,7 +122,7 @@ void Syntax::calcFollowSets()
     } while (updated);
 }
 
-void Syntax::calcSelectSets()
+void RuleAnalyzer::calcSelectSets()
 {
     calcFirstSets();
     calcFollowSets();
@@ -150,7 +150,7 @@ void Syntax::calcSelectSets()
     m_firstSetCache.clear();
 }
 
-std::pair<std::set<Symbol>, bool> Syntax::calcFirstSetOfSyms(const std::vector<Symbol>& syms,
+std::pair<std::set<Symbol>, bool> RuleAnalyzer::calcFirstSetOfSyms(const std::vector<Symbol>& syms,
                                                              size_t beginIdx, size_t endIdx) const
 {
     std::set<Symbol> firstSet;
@@ -201,7 +201,7 @@ std::pair<std::set<Symbol>, bool> Syntax::calcFirstSetOfSyms(const std::vector<S
     return {firstSet, allHasEpsilon};
 }
 
-void Syntax::printResults()
+void RuleAnalyzer::printResults()
 {
     // Print the FIRST set
     std::cout << "FIRST set:" << std::endl;
@@ -254,7 +254,7 @@ void Syntax::printResults()
     std::cout << std::endl;
 }
 
-void Syntax::clear()
+void RuleAnalyzer::clear()
 {
     m_terminals.clear();
     m_nonTerminals.clear();

@@ -12,6 +12,7 @@ namespace PL0
 using Symbol = std::string;
 
 constexpr Symbol EPSILON = "";
+constexpr Symbol ENDSYM = "##";
 
 enum class SymbolType
 {
@@ -25,18 +26,16 @@ enum class SymbolType
 struct Element
 {
     Symbol symbol;
-    std::optional<int> value;
-    std::optional<Action> action;
     SymbolType type;
+    std::vector<int> values;
 
-    Element(const Symbol& sym, bool synthesized = false, const std::optional<Action>& act = std::nullopt)
+    Element(const Symbol& sym, bool synthesized = false)
         : symbol(sym)
     {
-        if (sym == "#") {
+        if (sym == ENDSYM) {
             type = SymbolType::ENDSYM;
         } else if (std::isdigit(sym[0])) {
             type = SymbolType::ACTION;
-            action = act;
         } else if (std::isupper(sym[0])) {
             if (synthesized) {
                 type = SymbolType::SYNTHESIZED;
