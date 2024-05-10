@@ -1,7 +1,7 @@
 #pragma once
 #include "Action.hpp"
 #include "Parser.hpp"
-#include "RuleAnalyzer.hpp"
+#include "Rule.hpp"
 
 namespace PL0
 {
@@ -29,7 +29,7 @@ private:
 private:
     void printPredictionTable();
     void printState(const std::vector<Element>& analysisStack,
-                    const std::vector<std::string>& restInput);
+                    const std::vector<std::string>& inputStack);
 
 private:
     RuleAnalyzer m_analyzer;

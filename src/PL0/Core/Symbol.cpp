@@ -2,7 +2,7 @@
 
 namespace PL0
 {
-std::string translate2Symbol(const Token& token)
+Symbol translate2Symbol(const Token& token)
 {
     switch (token.type) {
     case TokenType::Keyword: {
@@ -24,7 +24,7 @@ std::string translate2Symbol(const Token& token)
     return "nul";
 }
 
-std::string translate2Symbol(const std::string& tokenValue)
+Symbol translate2Symbol(const std::string& tokenValue)
 {
     if (std::isdigit(tokenValue[0])) {
         return "num";

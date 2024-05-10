@@ -10,12 +10,78 @@ SemanticLL1Parser::SemanticLL1Parser()
     initSyntax();
 }
 
+void SemanticLL1Parser::initSyntax()
+{
+    // Arithmetic expression:
+    //   S -> E {0}                 {0} : print(E.val)
+    //   E -> + E' {1}              {1} : E.syn = E'.syn
+    //   E -> - E' {2}              {2} : E.syn = -E'.syn
+    //   E -> E' {3}                {3} : E.syn = E'.syn
+    //   E' -> T {4} E'' {5}        {4} : E''.inh = T.val               {5} : E'.syn = E''.syn
+    //   E'' -> + T {6} E''1 {7}    {6} : E''.inh = E''.inh + T.val     {7} : E''.syn = E''1.syn
+    //   E'' -> - T {8} E''1 {9}    {8} : E''.inh = E''.inh - T.val     {9} : E''.syn = E''1.syn
+    //   E'' -> ε {10}              {10} : E''.syn = E''.inh
+    //   T -> F {11} T' {12}        {11} : T'.inh = F.val               {12} : T.val = T'.syn
+    //   T' -> * F {13} T'1 {14}    {13} : T'1.inh = T'.inh * F.val     {14} : T'.syn = T'1.syn
+    //   T' -> / F {15} T'1 {16}    {15} : if F.val == 0 then error; T'1.inh = T'.inh / F.val
+    //                              {16} : T'.syn = T'1.syn
+    //   T' -> ε {17}               {17} : T'.syn = T'.inh
+    //   F -> ( E {18} )            {18} : F.val = E.val
+    //   F -> id {19}               {19} : error
+    //   F -> num {20}              {20} : F.val = num.val
+    //
+    // where E is for expression, T is for term, F is for factor.
+
+    m_analyzer.setBeginSym("S");
+    addRule("S", {"E", "0"});
+    addRule("E", {"+", "E'", "1"});
+    addRule("E", {"-", "E'", "2"});
+    addRule("E", {"E'", "3"});
+    addRule("E'", {"T", "4", "E''", "5"});
+    addRule("E''", {"+", "T", "6", "E''", "7"}, 3);
+    addRule("E''", {"-", "T", "8", "E''", "9"}, 3);
+    addRule("E''", {EPSILON, "10"}, 0);
+    addRule("T", {"F", "11", "T'", "12"});
+    addRule("T'", {"*", "F", "13", "T'", "14"}, 3);
+    addRule("T'", {"/", "F", "15", "T'", "16"}, 3);
+    addRule("T'", {EPSILON, "17"}, 0);
+    addRule("F", {"(", "E", "18", ")"});
+    addRule("F", {"id", "19"});
+    addRule("F", {"num", "20"});
+
+    m_analyzer.calcSelectSets();
+    generateTables();
+
+    // Semantic actions
+    setActionFunc("0", Action::print);
+    setActionFunc("1", Action::assign);
+    setActionFunc("2", Action::opposite);
+    setActionFunc("3", Action::assign);
+    setActionFunc("4", Action::assign);
+    setActionFunc("5", Action::assign);
+    setActionFunc("6", Action::add);
+    setActionFunc("7", Action::assign);
+    setActionFunc("8", Action::sub);
+    setActionFunc("9", Action::assign);
+    setActionFunc("10", Action::assign);
+    setActionFunc("11", Action::assign);
+    setActionFunc("12", Action::assign);
+    setActionFunc("13", Action::mul);
+    setActionFunc("14", Action::assign);
+    setActionFunc("15", Action::div);
+    setActionFunc("16", Action::assign);
+    setActionFunc("17", Action::assign);
+    setActionFunc("18", Action::assign);
+    setActionFunc("19", Action::assign);
+    setActionFunc("20", Action::assign);
+}
+
 void SemanticLL1Parser::addRule(const Symbol& lhs, const std::vector<Symbol>& rhs, int indexOffset)
 {
     m_rhsWithActions.push_back(rhs);
 
     // Remove all the actions on the right-hand side of the rule,
-    // then pass the rule to the syntax processor.
+    // then pass the rule to the analyzer.
     std::vector<Symbol> rhsCopy;
     for (const Symbol& sym : rhs) {
         // If a symbol begins with a digit, it is an action.
@@ -53,15 +119,15 @@ void SemanticLL1Parser::generateTables()
 
 void SemanticLL1Parser::parse(const std::vector<Token>& tokens)
 {
-    // Rest input
+    // Input stack
     // e.g. 3 + 5 * 2  =>  3 + 5 * 2 #
     //                      ------->
-    std::vector<std::string> restInput{ENDSYM};
+    std::vector<std::string> inputStack{ENDSYM};
     for (auto it = tokens.rbegin(); it != tokens.rend(); ++it) {
         // [NOTE] Numbers and identifiers are not translated to "num" and "id" here,
         //        because the value of numbers are needed in the semantic actions.
         //        The translation is done in the semantic actions.
-        restInput.push_back(it->value);
+        inputStack.push_back(it->value);
     }
 
     // Analysis stack
@@ -74,50 +140,45 @@ void SemanticLL1Parser::parse(const std::vector<Token>& tokens)
 
     try {
         // Translate the value of the input token to a symbol.
-        Symbol rtopSym = translate2Symbol(restInput.back());
+        Symbol rtopSym = translate2Symbol(inputStack.back());
 
-        while (!analysisStack.empty() && !restInput.empty()) {
-            // printState(analysisStack, restInput);
+        while (!analysisStack.empty() && !inputStack.empty()) {
+            // printState(analysisStack, inputStack);
             size_t atopIndex = analysisStack.size() - 1;
             const Element& atop = analysisStack.back();
+
             if (atop.type == SymbolType::TERMINAL || atop.type == SymbolType::ENDSYM) {
                 // If these two symbols do not match, throw a syntax error.
                 if (atop.symbol != rtopSym) {
-                    throw SyntaxError(
-                        std::format("Syntax error: The terminal symbol {} does not match "
-                                    "the top of the input stack {}.",
-                                    atop.symbol, rtopSym));
+                    throw SyntaxError(std::format(
+                        "The terminal symbol {} does not match the top of the input stack {}.",
+                        atop.symbol, rtopSym));
                 }
 
                 // If the top is an identifier, throw a semantic error.
                 if (atop.symbol == "id") {
-                    throw SemanticError(
-                        "Semantic error: Identifier is not allowed in the expression.");
+                    throw SemanticError("Identifier is not allowed in the expression.");
                 }
-
-                ///////////////////////
-                //    Top matched.   //
-                ///////////////////////
 
                 if (atop.symbol == "num") {
                     // Fetch the value of the number.
-                    int num = std::stoi(restInput.back());
+                    int num = std::stoi(inputStack.back());
 
                     // Assign the value of the number to the new top.
                     // [NOTE] The new top is certainly an action: { F.val = num.val },
-                    //        because only F -> num can produce a terminal symbol "num".
+                    //        because only F -> num can produce the terminal symbol "num".
                     //        And it is safe to access analysisStack[atopIndex - 1].
                     Element& newAtop = analysisStack[atopIndex - 1];
                     newAtop.values.push_back(num);
                 }
 
-                // Pop analysis stack and rest input.
+                // Pop analysis stack and input stack.
                 analysisStack.pop_back();
-                restInput.pop_back();
+                inputStack.pop_back();
 
-                // Update the top symbol of the rest input.
-                if (!restInput.empty()) {
-                    rtopSym = translate2Symbol(restInput.back());
+                // Update the top symbol of the input stack.
+                if (!inputStack.empty()) {
+                    rtopSym = translate2Symbol(inputStack.back());
                 }
             } else if (atop.type == SymbolType::NON_TERMINAL) {
                 //////////////////////////////////////////////////////////////////////
@@ -127,7 +188,7 @@ void SemanticLL1Parser::parse(const std::vector<Token>& tokens)
                 // If there is no such rule, throw a syntax error.
                 const auto& allRules = m_predictionTable[atop.symbol];
                 if (allRules.find(rtopSym) == allRules.end()) {  // Not found
-                    throw SyntaxError(std::format("Syntax error: {} is not allowed.", rtopSym));
+                    throw SyntaxError(std::format("{} is not allowed.", rtopSym));
                 }
                 const auto& rule = m_predictionTable[atop.symbol][rtopSym];
 
@@ -213,7 +274,7 @@ void SemanticLL1Parser::parse(const std::vector<Token>& tokens)
                                                   e.type == SymbolType::NON_TERMINAL;
                                        });
                 if (it == analysisStack.rend()) {
-                    throw SyntaxError("Syntax error: Missing synthesized attribute or non-terminal "
+                    throw SyntaxError("Missing synthesized attribute or non-terminal "
                                       "symbol after the action.");
                 }
 
@@ -236,73 +297,7 @@ void SemanticLL1Parser::parse(const std::vector<Token>& tokens)
         return;
     }
 
-    Reporter::info("Syntax correct.");
-}
-
-void SemanticLL1Parser::initSyntax()
-{
-    // Arithmetic expression:
-    //   S -> E {0}                 {0} : print(E.val)
-    //   E -> + E' {1}              {1} : E.syn = E'.syn
-    //   E -> - E' {2}              {2} : E.syn = -E'.syn
-    //   E -> E' {3}                {3} : E.syn = E'.syn
-    //   E' -> T {4} E'' {5}        {4} : E''.inh = T.val               {5} : E'.syn = E''.syn
-    //   E'' -> + T {6} E''1 {7}    {6} : E''.inh = E''.inh + T.val     {7} : E''.syn = E''1.syn
-    //   E'' -> - T {8} E''1 {9}    {8} : E''.inh = E''.inh - T.val     {9} : E''.syn = E''1.syn
-    //   E'' -> ε {10}              {10} : E''.syn = E''.inh
-    //   T -> F {11} T' {12}        {11} : T'.inh = F.val               {12} : T.val = T'.syn
-    //   T' -> * F {13} T'1 {14}    {13} : T'1.inh = T'.inh * F.val     {14} : T'.syn = T'1.syn
-    //   T' -> / F {15} T'1 {16}    {15} : if F.val == 0 then error; T'1.inh = T'.inh / F.val
-    //                              {16} : T'.syn = T'1.syn
-    //   T' -> ε {17}               {17} : T'.syn = T'.inh
-    //   F -> ( E {18} )            {18} : F.val = E.val
-    //   F -> id {19}               {19} : error
-    //   F -> num {20}              {20} : F.val = num.val
-    //
-    // where E is for expression, T is for term, F is for factor.
-
-    m_analyzer.setBeginSym("S");
-    addRule("S", {"E", "0"});
-    addRule("E", {"+", "E'", "1"});
-    addRule("E", {"-", "E'", "2"});
-    addRule("E", {"E'", "3"});
-    addRule("E'", {"T", "4", "E''", "5"});
-    addRule("E''", {"+", "T", "6", "E''", "7"}, 3);
-    addRule("E''", {"-", "T", "8", "E''", "9"}, 3);
-    addRule("E''", {EPSILON, "10"}, 0);
-    addRule("T", {"F", "11", "T'", "12"});
-    addRule("T'", {"*", "F", "13", "T'", "14"}, 3);
-    addRule("T'", {"/", "F", "15", "T'", "16"}, 3);
-    addRule("T'", {EPSILON, "17"}, 0);
-    addRule("F", {"(", "E", "18", ")"});
-    addRule("F", {"id", "19"});
-    addRule("F", {"num", "20"});
-
-    m_analyzer.calcSelectSets();
-    generateTables();
-
-    // Semantic actions
-    setActionFunc("0", Action::print);
-    setActionFunc("1", Action::assign);
-    setActionFunc("2", Action::opposite);
-    setActionFunc("3", Action::assign);
-    setActionFunc("4", Action::assign);
-    setActionFunc("5", Action::assign);
-    setActionFunc("6", Action::add);
-    setActionFunc("7", Action::assign);
-    setActionFunc("8", Action::sub);
-    setActionFunc("9", Action::assign);
-    setActionFunc("10", Action::assign);
-    setActionFunc("11", Action::assign);
-    setActionFunc("12", Action::assign);
-    setActionFunc("13", Action::mul);
-    setActionFunc("14", Action::assign);
-    setActionFunc("15", Action::div);
-    setActionFunc("16", Action::assign);
-    setActionFunc("17", Action::assign);
-    setActionFunc("18", Action::assign);
-    setActionFunc("19", Action::assign);
-    setActionFunc("20", Action::assign);
+    Reporter::success("Syntax correct.");
 }
 
 void SemanticLL1Parser::printPredictionTable()
@@ -327,7 +322,7 @@ void SemanticLL1Parser::printPredictionTable()
 }
 
 void SemanticLL1Parser::printState(const std::vector<Element>& analysisStack,
-                                   const std::vector<std::string>& restInput)
+                                   const std::vector<std::string>& inputStack)
 {
     std::cout << "Analysis stack: ";
     for (const auto& sym : analysisStack) {
@@ -346,8 +341,8 @@ void SemanticLL1Parser::printState(const std::vector<Element>& analysisStack,
         std::cout << "Value: " << v << "\n";
     }
 
-    std::cout << "Rest input: ";
-    for (auto it = restInput.rbegin(); it != restInput.rend(); ++it) {
+    std::cout << "Input stack: ";
+    for (auto it = inputStack.rbegin(); it != inputStack.rend(); ++it) {
         std::cout << translate2Symbol(*it) << " ";
     }
     std::cout << "\n";

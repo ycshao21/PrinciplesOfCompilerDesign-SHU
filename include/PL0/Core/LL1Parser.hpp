@@ -1,6 +1,6 @@
 #pragma once
 #include "Parser.hpp"
-#include "RuleAnalyzer.hpp"
+#include "Rule.hpp"
 #include "Symbol.hpp"
 
 namespace PL0
@@ -20,7 +20,7 @@ private:
 
 private:
     void printPredictionTable();
-    void printState(const std::vector<Symbol>& analysisStack, const std::vector<Symbol>& restInput);
+    void printState(const std::vector<Symbol>& analysisStack, const std::vector<Symbol>& inputStack);
 
 private:
     RuleAnalyzer m_analyzer;

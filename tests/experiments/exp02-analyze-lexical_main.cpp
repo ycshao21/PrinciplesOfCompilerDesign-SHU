@@ -17,8 +17,8 @@ void analyzeLexical(const std::string& srcFile, const std::string& outputFile)
         throw std::runtime_error(std::format("Failed to open file: {}", outputFile));
     }
     for (const PL0::Token& token : tokens) {
-        std::string encodedType = encode(token);
-        output << std::format("({}, {})", encodedType, token.value) << std::endl;
+        std::string code = PL0::Lexer::encode(token);
+        output << std::format("({}, {})", code, token.value) << std::endl;
     }
     output.close();
 }

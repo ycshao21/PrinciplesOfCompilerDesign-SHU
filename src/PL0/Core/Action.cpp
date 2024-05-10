@@ -11,10 +11,10 @@ namespace Action
 int print(const std::vector<int>& operands)
 {
     if (operands.empty()) {
-        throw SemanticError("Semantic error: No operand to print.");
+        throw SemanticError("No operand to print.");
     }
     if (operands.size() > 1) {
-        throw SemanticError("Semantic error: Too many operands to print.");
+        throw SemanticError("Too many operands to print.");
     }
     int ans = operands[0];
     Reporter::info(std::format("Ans = {}", ans));
@@ -24,10 +24,10 @@ int print(const std::vector<int>& operands)
 int assign(const std::vector<int>& operands)
 {
     if (operands.empty()) {
-        throw SemanticError("Semantic error: No operand for assignment.");
+        throw SemanticError("No operand for assignment.");
     }
     if (operands.size() > 1) {
-        throw SemanticError("Semantic error: Too many operands for assignment.");
+        throw SemanticError("Too many operands for assignment.");
     }
     return operands[0];
 }
@@ -35,10 +35,10 @@ int assign(const std::vector<int>& operands)
 int opposite(const std::vector<int>& operands)
 {
     if (operands.empty()) {
-        throw SemanticError("Semantic error: No operand for opposite.");
+        throw SemanticError("No operand for opposite.");
     }
     if (operands.size() > 1) {
-        throw SemanticError("Semantic error: Too many operands for opposite.");
+        throw SemanticError("Too many operands for opposite.");
     }
     return -operands[0];
 }
@@ -46,10 +46,10 @@ int opposite(const std::vector<int>& operands)
 int add(const std::vector<int>& operands)
 {
     if (operands.size() < 2) {
-        throw SemanticError("Semantic error: Too few operands for addition.");
+        throw SemanticError("Too few operands for addition.");
     }
     if (operands.size() > 2) {
-        throw SemanticError("Semantic error: Too many operands for addition.");
+        throw SemanticError("Too many operands for addition.");
     }
 
     return operands[0] + operands[1];
@@ -58,10 +58,10 @@ int add(const std::vector<int>& operands)
 int sub(const std::vector<int>& operands)
 {
     if (operands.size() < 2) {
-        throw SemanticError("Semantic error: Too few operands for subtraction.");
+        throw SemanticError("Too few operands for subtraction.");
     }
     if (operands.size() > 2) {
-        throw SemanticError("Semantic error: Too many operands for subtraction.");
+        throw SemanticError("Too many operands for subtraction.");
     }
     return operands[0] - operands[1];
 }
@@ -69,10 +69,10 @@ int sub(const std::vector<int>& operands)
 int mul(const std::vector<int>& operands)
 {
     if (operands.size() < 2) {
-        throw SemanticError("Semantic error: Too few operands for multiplication.");
+        throw SemanticError("Too few operands for multiplication.");
     }
     if (operands.size() > 2) {
-        throw SemanticError("Semantic error: Too many operands for multiplication.");
+        throw SemanticError("Too many operands for multiplication.");
     }
     return operands[0] * operands[1];
 }
@@ -80,13 +80,13 @@ int mul(const std::vector<int>& operands)
 int div(const std::vector<int>& operands)
 {
     if (operands.size() < 2) {
-        throw SemanticError("Semantic error: Too few operands for division.");
+        throw SemanticError("Too few operands for division.");
     }
     if (operands.size() > 2) {
-        throw SemanticError("Semantic error: Too many operands for division.");
+        throw SemanticError("Too many operands for division.");
     }
     if (operands[1] == 0) {
-        throw SemanticError("Semantic error: Division by zero.");
+        throw SemanticError("Division by zero.");
     }
     return operands[0] / operands[1];
 }

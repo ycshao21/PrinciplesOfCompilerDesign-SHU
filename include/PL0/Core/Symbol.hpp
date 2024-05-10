@@ -49,8 +49,9 @@ struct Element
 };
 
 
-std::string translate2Symbol(const Token& token);
+Symbol translate2Symbol(const Token& token);
 
 // [WARNING] This function is not suitable for keywords.
-std::string translate2Symbol(const std::string& tokenValue);
+Symbol translate2Symbol(const std::string& tokenValue);
+
 }  // namespace PL0

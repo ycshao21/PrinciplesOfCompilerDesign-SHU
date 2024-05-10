@@ -1,4 +1,4 @@
-#include "PL0/Core/RuleAnalyzer.hpp"
+#include "PL0/Core/Rule.hpp"
 #include <format>
 #include <iostream>
 #include <ranges>

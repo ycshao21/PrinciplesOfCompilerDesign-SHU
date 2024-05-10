@@ -3,9 +3,17 @@
 
 namespace PL0
 {
+/**
+ * @brief Syntax parser for PL/0 using recursive descent parsing.
+ * @note This parser can only parse arithmetic expressions.
+*/
 class RecursiveDescentParser: public Parser
 {
 public:
+    /**
+     * @brief Parse the given tokens.
+     * @param tokens The tokens to parse.
+    */
     virtual void parse(const std::vector<Token>& tokens) override;
 
 private:
@@ -18,53 +26,39 @@ private:
     // <Factor> ::= <Identifier> | <Number> | '(' <Exp> ')'
     void factor();
 
-    ////////////////////////////////////////////////////
-    // Extensions
-    ////////////////////////////////////////////////////
-
-    // // <Condition> ::= <Exp> <RelOp> <Exp> | odd <Exp>
-    // bool condition();
-
 private:
 
     // <AddOp> ::= +|-
-    bool isAddOp() {
-        const Token& token = getCurToken();
-        return token.type == TokenType::Operator &&
-               (token.value == "+" || token.value == "-");
-    }
+    bool isAddOp() const;
 
     // <MulOp> ::= *|/
-    bool isMulOp() {
-        const Token& token = getCurToken();
-        return token.type == TokenType::Operator &&
-               (token.value == "*" || token.value == "/");
-    }
-
-    // <RelOp> ::= =|#|<|<=|>|>=
-    bool isRelOp() {
-        const Token& token = getCurToken();
-        return token.type == TokenType::Operator &&
-               (token.value == "=" || token.value == "#" || token.value == "<" ||
-                token.value == "<=" || token.value == ">" || token.value == ">=");
-    }
+    bool isMulOp() const;
 
 private:
-    inline bool reachEnd() const
-    {
-        return m_curIndex >= m_tokens->size();
-    }
-
-    inline const Token& getCurToken() const
-    {
-        return m_tokens->at(m_curIndex);
-    }
-
+    /**
+     * @brief Move to the next token (if not reach the end).
+    */
     inline void consume()
     {
         if (m_curIndex < m_tokens->size()) {
             m_curIndex++;
         }
+    }
+
+    /**
+     * @return True if all tokens are consumed, false otherwise.
+    */
+    inline bool reachEnd() const
+    {
+        return m_curIndex >= m_tokens->size();
+    }
+
+    /**
+     * @return The current token.
+    */
+    inline const Token& getCurToken() const
+    {
+        return m_tokens->at(m_curIndex);
     }
 
 private:
