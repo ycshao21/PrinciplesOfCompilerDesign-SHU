@@ -13,25 +13,26 @@ LL1Parser::LL1Parser()
 
 void LL1Parser::initSyntax()
 {
-    // Arithmetic expression:
-    //   S -> E
-    //   E -> + T E'
-    //   E -> - T E'
-    //   E -> T E'
-    //   E' -> + T E'
-    //   E' -> - T E'
-    //   E' -> ε
-    //   T -> F T'
-    //   T' -> * F T'
-    //   T' -> / F T'
-    //   T' -> ε
-    //   F -> ( E )
-    //   F -> id
-    //   F -> num
-    //
-    // where E is for expression, T is for term, F is for factor.
+    /**
+     * @note The syntax of arithmetic expressions:
+     *  S -> E
+     *  E -> + T E'
+     *  E -> - T E'
+     *  E -> T E'
+     *  E' -> + T E'
+     *  E' -> - T E'
+     *  E' -> ε
+     *  T -> F T'
+     *  T' -> * F T'
+     *  T' -> / F T'
+     *  T' -> ε
+     *  F -> ( E )
+     *  F -> id
+     *  F -> num
+     */
 
     m_analyzer.setBeginSym("S");
+
     m_analyzer.addRule("S", {"E"});
     m_analyzer.addRule("E", {"+", "E'"});
     m_analyzer.addRule("E", {"-", "E'"});
@@ -68,60 +69,68 @@ void LL1Parser::generatePredictionTable()
 
 void LL1Parser::parse(const std::vector<Token>& tokens)
 {
-    // Input stack
-    // e.g. a + 5 * b  =>  a + 5 * b #
-    //                      ------->
+    /**
+     * @note Input stack (The bottom is at index 0):
+     *   a + 5 * b  =>
+     *   ----------------------------
+     *   | ENDSYM  id  *  num  +  id   <---
+     *   ----------------------------
+     */
     std::vector<Symbol> inputStack{ENDSYM};
+
+    // Tranlate all tokens to symbols and push them in reverse order.
     for (auto it = tokens.rbegin(); it != tokens.rend(); ++it) {
         Symbol symbol = translate2Symbol(*it);
         inputStack.push_back(symbol);
     }
 
-    // Analysis stack
-    // Initial state (The bottom is at index 0):
-    // ----------------
-    // |  #  S      <---
-    // ----------------
+    /**
+     * @note Analysis stack (The bottom is at index 0):
+     *   Initial state:
+     *    --------------------
+     *    |  ENDSYM  BEGINSYM      <---
+     *    --------------------
+     */
     std::vector<Symbol> analysisStack{ENDSYM, m_analyzer.getBeginSym()};
 
     try {
         while (!analysisStack.empty() && !inputStack.empty()) {
             Symbol atop = analysisStack.back();
-            Symbol rtop = inputStack.back();
+            Symbol itop = inputStack.back();
 
+            /**
+             * @note If the top of the analysis stack is a terminal symbol or the end symbol,
+             *      then it should match the top of the input stack.
+             */
             if (m_analyzer.isTerminal(atop) || atop == ENDSYM) {
-                if (atop != rtop) {
+                if (atop != itop) {  // Mismatch
                     throw SyntaxError(std::format(
                         "The terminal symbol {} does not match the top of the input stack {}.",
-                        atop, rtop));
+                        atop, itop));
                 }
-
-                ///////////////////////
-                //    Top matched.   //
-                ///////////////////////
 
                 // Pop analysis stack and input stack.
                 analysisStack.pop_back();
                 inputStack.pop_back();
             } else {
-                //////////////////////////////////////////////////////////////////////
-                // Replace the top non-terminal symbol X with the corresponding rule.
-                //////////////////////////////////////////////////////////////////////
+                /**
+                 * @note If the top of the analysis stack is a non-terminal symbol X,
+                 *     find the production rule X -> Y1Y2...Yn in the prediction table,
+                 *     and replace X with Y1Y2...Yn (in reverse order) in the analysis stack (except ε).
+                 */
 
-                // If there is no such rule, throw a syntax error.
-                const auto& allRules = m_predictionTable[atop];
-                if (allRules.find(rtop) == allRules.end()) {
-                    throw SyntaxError(
-                        std::format("No production rules found for {} -> {}.", atop, rtop));
+                const auto& items = m_predictionTable[atop];
+                if (items.find(itop) == items.end()) {  // No such production rule
+                    throw SyntaxError(std::format("{} is not allowed.", itop));
                 }
-                const auto& rule = m_predictionTable[atop][rtop];
+                const auto& rhs = m_predictionTable[atop][itop];
 
                 // 1) Pop X
                 analysisStack.pop_back();
 
-                // 2) Push the symbols of the rule in reverse order.
-                for (auto it = rule.rbegin(); it != rule.rend(); ++it) {
-                    if (!it->empty()) {
+                // 2) Push Yn, Yn-1, ..., Y1
+                for (auto it = rhs.rbegin(); it != rhs.rend(); ++it) {
+                    if (*it != EPSILON) {  // Skip ε
                         analysisStack.push_back(*it);
                     }
                 }
@@ -132,6 +141,9 @@ void LL1Parser::parse(const std::vector<Token>& tokens)
         return;
     }
 
+    /**
+     * @note It is impossible that one of the stacks is empty while the other is not.
+     */
     Reporter::success("Syntax correct.");
 }
 

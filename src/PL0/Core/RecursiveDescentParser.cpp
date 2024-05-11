@@ -7,20 +7,25 @@ namespace PL0
 void RecursiveDescentParser::parse(const std::vector<Token>& tokens)
 {
     m_tokens = std::make_unique<std::vector<Token>>(tokens);
+
     try {
+        // Start parsing
         exp();
+
+        // Check if all tokens are consumed
         if (!reachEnd()) {
             throw SyntaxError(std::format("Expecting end of expression, but got '{}' instead.",
                                           getCurToken().value));
         }
+
         Reporter::success("Syntax correct.");
     } catch (const SyntaxError& e) {
         Reporter::error(e.what());
     }
+
     m_tokens.reset();
 }
 
-// <Exp> ::= [<AddOp] <Term> { <AddOp> <Term> }
 void RecursiveDescentParser::exp()
 {
     // [<AddOp>]
@@ -38,7 +43,6 @@ void RecursiveDescentParser::exp()
     }
 }
 
-// <Term> ::= <Factor> { <MulOp> <Factor> }
 void RecursiveDescentParser::term()
 {
     // <Factor>
@@ -51,7 +55,6 @@ void RecursiveDescentParser::term()
     }
 }
 
-// <Factor> ::= <Identifier> | <Number> | '(' <Exp> ')'
 void RecursiveDescentParser::factor()
 {
     if (!reachEnd() &&

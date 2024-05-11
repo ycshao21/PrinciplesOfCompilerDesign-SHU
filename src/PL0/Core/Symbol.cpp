@@ -35,4 +35,22 @@ Symbol translate2Symbol(const std::string& tokenValue)
     }
 }
 
+Element::Element(const Symbol& sym, bool synthesized)
+    : symbol(sym)
+{
+    if (sym == ENDSYM) {
+        type = SymbolType::ENDSYM;
+    } else if (std::isdigit(sym[0])) {
+        type = SymbolType::ACTION;
+    } else if (std::isupper(sym[0])) {
+        if (synthesized) {
+            type = SymbolType::SYNTHESIZED;
+        } else {
+            type = SymbolType::NON_TERMINAL;
+        }
+    } else {
+        type = SymbolType::TERMINAL;
+    }
+}
+
 } // namespace PL0

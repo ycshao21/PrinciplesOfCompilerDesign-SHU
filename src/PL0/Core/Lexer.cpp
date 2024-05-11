@@ -132,7 +132,7 @@ Token Lexer::getUnknownSymbol()
     return token;
 }
 
-std::string Lexer::encode(const Token& token)
+std::string Lexer::encode(const Token& token) noexcept
 {
     switch (token.type) {
     case TokenType::Keyword: {

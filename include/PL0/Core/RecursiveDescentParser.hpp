@@ -13,6 +13,7 @@ public:
     /**
      * @brief Parse the given tokens.
      * @param tokens The tokens to parse.
+     * @note Once there is a syntax error, the parsing process will stop immediately.
     */
     virtual void parse(const std::vector<Token>& tokens) override;
 
@@ -62,7 +63,7 @@ private:
     }
 
 private:
-    std::unique_ptr<std::vector<Token>> m_tokens = nullptr;
-    size_t m_curIndex = 0;
+    std::unique_ptr<std::vector<Token>> m_tokens = nullptr;  // The tokens to parse
+    size_t m_curIndex = 0;  // The index of the current token
 };
 } // namespace PL0
