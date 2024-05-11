@@ -20,8 +20,8 @@ void recognizeIdent(const std::string& srcFile, const std::string& outputFile)
     std::vector<IdentInfo> identifiers;
     for (const PL0::Token& token : tokens) {
         if (token.type == PL0::TokenType::Identifier) {
-            auto fn = [&token](const IdentInfo& info) { return info.ident == token.value; };
-            auto it = std::ranges::find_if(identifiers, fn);
+            auto it = std::ranges::find_if(
+                identifiers, [&token](const IdentInfo& info) { return info.ident == token.value; });
             if (it == identifiers.end()) {
                 identifiers.push_back({token.value, 1});
             } else {

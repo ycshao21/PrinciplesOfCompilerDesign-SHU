@@ -19,3 +19,5 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  ${EXPERIMENT_OUTPUT_PATH})
 # Add the experiments executables
 add_executable(exp01 ${SOURCES} "./experiments/exp01-recognize-identifier_main.cpp")
 add_executable(exp02 ${SOURCES} "./experiments/exp02-analyze-lexical_main.cpp")
+add_executable(exp03 ${SOURCES} "./experiments/exp03-analyze-syntax_main.cpp")
+add_executable(exp04 ${SOURCES} "./experiments/exp04-analyze-semantics_main.cpp")
