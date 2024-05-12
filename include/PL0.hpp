@@ -11,6 +11,9 @@
 // Experiment 4
 #include "PL0/Core/SemanticLL1Parser.hpp"
 
+// Experiment 6
+#include "PL0/Core/Optimizer.hpp"
+
 #include "PL0/Utils/ArgParser.hpp"
 #include "PL0/Utils/Reporter.hpp"
 #include "PL0/Utils/Scanner.hpp"
