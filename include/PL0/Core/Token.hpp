@@ -6,6 +6,10 @@
 
 namespace PL0
 {
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Token
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
 enum class TokenType : uint8_t
 {
     Invalid = 0,
@@ -13,8 +17,7 @@ enum class TokenType : uint8_t
     Identifier,
     Number,
     Operator,
-    Delimiter,
-    EndOfFile
+    Delimiter
 };
 
 struct Token
@@ -23,6 +26,10 @@ struct Token
     std::string value;
 };
 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Constants
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
 constexpr std::array<std::string, 13> KEYWORDS = {"const", "var",   "procedure", "begin", "end",
                                                   "if",    "then",  "while",     "do",    "call",
                                                   "odd",   "write", "read"};
@@ -30,6 +37,10 @@ constexpr std::array<std::string, 13> KEYWORDS = {"const", "var",   "procedure",
 constexpr std::array<char, 9> OPERATORS_CH = {'+', '-', '*', '/', '=', '#', '>', '<', ':'};
 
 constexpr std::array<char, 5> DELIMITERS = {'(', ')', ',', ';', '.'};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Utility functions
+/////////////////////////////////////////////////////////////////////////////////////////////////
 
 inline bool isDigit(char c)
 {

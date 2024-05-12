@@ -6,5 +6,5 @@ begin
         result :=a;
 
     if a < b then
-        result := b;
+        result : b;
 end.

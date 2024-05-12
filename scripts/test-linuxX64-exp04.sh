@@ -11,14 +11,14 @@ if [[ $1 != *.pl0 ]]; then
 fi
 
 # Check if binary file exists
-BIN=bin/Release/Linux_x86_64/exp03
+BIN=bin/Release/Linux_x86_64/exp04
 if [ ! -f $BIN ]; then
     echo "Error: $BIN does not exist"
     exit 1
 fi
 
 # Check if source file exists
-SRC_FILE=tests/data/exp03-analyze-syntax/$1
+SRC_FILE=tests/data/exp04-analyze-semantics/$1
 if [ ! -f $SRC_FILE ]; then
     echo "Error: $SRC_FILE does not exist"
     exit 1

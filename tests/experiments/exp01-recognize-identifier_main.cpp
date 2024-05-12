@@ -9,20 +9,19 @@
 struct IdentInfo
 {
     std::string ident = "";
-    int count = 0;
+    uint64_t count = 0;
 };
 
 void recognizeIdent(const std::string& srcFile, const std::string& outputFile)
 {
-    PL0::Lexer lexer(srcFile);
+    PL0::Lexer lexer;
+    std::vector<PL0::Token> tokens = lexer.tokenize(srcFile);
 
     std::vector<IdentInfo> identifiers;
-
-    for (PL0::Token token = lexer.getNextToken(); token.type != PL0::TokenType::EndOfFile;
-         token = lexer.getNextToken()) {
+    for (const PL0::Token& token : tokens) {
         if (token.type == PL0::TokenType::Identifier) {
-            auto fn = [&token](const IdentInfo& info) { return info.ident == token.value; };
-            auto it = std::ranges::find_if(identifiers, fn);
+            auto it = std::ranges::find_if(
+                identifiers, [&token](const IdentInfo& info) { return info.ident == token.value; });
             if (it == identifiers.end()) {
                 identifiers.push_back({token.value, 1});
             } else {

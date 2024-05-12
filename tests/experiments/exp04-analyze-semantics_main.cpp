@@ -7,15 +7,12 @@
 
 #include "PL0.hpp"
 
-#include <functional>
-
-void analyzeSyntax(const std::string& srcFile)
+void analyzeSemantics(const std::string& srcFile)
 {
     PL0::Lexer lexer;
     std::vector<PL0::Token> tokens = lexer.tokenize(srcFile);
 
-    // PL0::RecursiveDescentParser parser;
-    PL0::LL1Parser parser;
+    PL0::SemanticLL1Parser parser;
     parser.parse(tokens);
 }
 
@@ -28,5 +25,5 @@ int main(int argc, char* argv[])
     std::string srcFile = *(argParser.get<std::string>("f"));
     std::cout << "Source file: " << srcFile << std::endl;
 
-    analyzeSyntax(srcFile);
+    analyzeSemantics(srcFile);
 }
