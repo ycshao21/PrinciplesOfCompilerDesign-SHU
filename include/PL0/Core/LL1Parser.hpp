@@ -6,14 +6,12 @@
 namespace PL0
 {
 /**
- * @brief Syntax parser for PL/0 using LL(1) parsing.
- * @note This parser can only parse arithmetic expressions.
+ * @brief 使用 LL(1) 实现的 PL/0 语法分析器。
 */
 class LL1Parser : public Parser
 {
     /**
-     * @note The prediction table for LL(1) parsing.
-     *     < left-hand side, <symbol in SELECT set, right-hand side> >
+     * @note 预测分析表 <产生式左侧, <SELECT 集元素, 产生式右侧> >
     */
     using PredictionTable = std::map<Symbol, std::map<Symbol, std::vector<Symbol>>>;
 
@@ -21,9 +19,9 @@ public:
     LL1Parser();
 
     /**
-     * @brief Parse the given tokens.
-     * @param tokens The tokens to parse.
-     * @note Once there is a syntax error, the parsing process will stop immediately.
+     * @brief 解析给定的词。
+     * @param tokens 要解析的词。
+     * @note 一旦出现语法错误，解析过程将立即停止。
     */
     virtual void parse(const std::vector<Token>& tokens) override;
 

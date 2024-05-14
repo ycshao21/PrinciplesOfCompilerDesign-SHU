@@ -7,7 +7,7 @@ namespace PL0
 namespace Action
 {
 //////////////////////
-// Action functions
+// 动作函数
 //////////////////////
 
 int print(const std::vector<int>& operands);

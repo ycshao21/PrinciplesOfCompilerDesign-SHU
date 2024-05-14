@@ -8,59 +8,56 @@ namespace PL0
 constexpr int NULL_OFFSET = -999999999;  // The value does not need to be passed.
 
 /**
- * @brief Semantic parser for PL/0 using LL(1) parsing.
- * @note This parser can only parse arithmetic expressions.
+ * @brief 使用 LL(1) 实现的 PL/0 语义分析器。
+ * @note 该分析器只能解析算术表达式。
  */
 class SemanticLL1Parser : public Parser
 {
     /**
-     * @note The prediction table for LL(1) parsing.
-     *    < left-hand side, <symbol in SELECT set, right-hand side> >
-     */
+     * @note 预测分析表 <产生式左侧, <SELECT 集元素, 产生式右侧> >
+    */
     using PredictionTable = std::map<Symbol, std::map<Symbol, std::vector<Symbol>>>;
     /**
-     * @note The offset table for non-terminal symbols.
-     *   < non-terminal symbol, <symbol, offset> >
-     */
+     * @note 非终结符的偏移表 <非终结符, <终结符, 偏移> >
+    */
     using IndexOffsetTable = std::map<Symbol, std::map<Symbol, int>>;
     /**
-     * @note The action function type.
-     * @note const std::vector<int>&: Operands for the action function.
-     */
+     * @note 动作函数类型
+     * @note const std::vector<int>&: 动作函数的操作数
+    */
     using ActionFunc = std::function<int(const std::vector<int>&)>;
 
 public:
     SemanticLL1Parser();
 
     /**
-     * @brief Parse the given tokens.
-     * @param tokens The tokens to parse.
-     * @note Once there is a syntax or semantic error, the parsing process will stop immediately.
-     */
+     * @brief 解析给定的词。
+     * @param tokens 要解析的词。
+     * @note 一旦出现语法或语义错误，解析过程将立即停止。
+    */
     virtual void parse(const std::vector<Token>& tokens) override;
 
 private:
     void initSyntax();
 
     /**
-     * @brief Add a rule to the syntax analyzer.
-     * @param lhs The left-hand side of the rule.
-     * @param rhs The right-hand side of the rule.
-     * @param indexOffset The offset to locate where the value of an non-terminal symbol should be
-     *      passed to.
-     */
+     * @brief 添加一条规则。
+     * @param lhs 规则的左侧。
+     * @param rhs 规则的右侧。
+     * @param indexOffset 用于定位非终结符的值应该传递到哪里的偏移量。
+    */
     void addRule(const Symbol& lhs, const std::vector<Symbol>& rhs, int indexOffset = NULL_OFFSET);
 
     /**
-     * @brief Set the action function for the given action symbol.
-     * @param actionSym The action symbol. e.g. "10"
-     * @param func The action function.
-     */
+     * @brief 为给定的动作符号设置动作函数。
+     * @param actionSym 动作符号。例如 "10"
+     * @param func 动作函数。
+    */
     void setActionFunc(const std::string& actionSym, const ActionFunc& func);
 
     /**
-     * @brief Generate the prediction table and the index offset table.
-     */
+     * @brief 生成预测分析表和偏移表。
+    */
     void generateTables();
 
 private:

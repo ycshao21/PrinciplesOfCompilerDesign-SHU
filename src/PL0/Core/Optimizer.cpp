@@ -19,13 +19,12 @@ std::vector<Quadruple> Optimizer::optimize(const std::vector<Quadruple>& quads)
         }
 
         Quadruple quad;
-        // If the node has no operands, it is a constant or an identifier.
-        // Assign the value to the FIRST NAME of the result.
+        // 如果结点没有操作数，那么它是一个常数或标识符，将值赋给结果的第一个变量名。
         if (node->operands.empty()) {
             quad = {"=", node->value, "", node->names[0]};
         }
-        // Otherwise, assign the operator and operands to the first name of the result.
-        // If an operand is a constant, assign its value, otherwise assign its name.
+        // 否则，将操作符和操作数赋给结果的第一个变量名。
+        // 其中，如果操作数是常数，将其值赋给结果，否则将其名字赋给结果。
         else {
             NodePtr operand1Node = node->operands[0];
             std::string operand1 =
@@ -39,7 +38,7 @@ std::vector<Quadruple> Optimizer::optimize(const std::vector<Quadruple>& quads)
         }
         newQuads.push_back(quad);
 
-        // If there are multiple names for the result, assign the first name to other names.
+        // 如果有多个变量名，将第一个变量名赋给其他变量名。
         for (size_t nameIndex = 1; nameIndex < node->names.size(); ++nameIndex) {
             Quadruple quad{"=", node->names[0], "", node->names[nameIndex]};
             newQuads.push_back(quad);
@@ -58,7 +57,7 @@ void Optimizer::generateDAG(const std::vector<Quadruple>& quads)
         if (node1Exists) {
             node1 = m_nodePtrMap[operand1];
         } else {
-            // Create a new node for operand1.
+            // 为 operand1 创建一个新结点。
             node1 = std::make_shared<DAGNode>();
             node1->names.push_back(operand1);
             node1->value = operand1;
@@ -68,18 +67,18 @@ void Optimizer::generateDAG(const std::vector<Quadruple>& quads)
         NodePtr curNode = nullptr;
 
         /**
-         * @note A quadruple is in the form of (op, operand1, operand2, result).
-         *      There are only two valid cases:
-         *     - Case1: (op, operand1, operand2, result)
-         *     - Case2: (= , operand1, _, result)
-         */
-        if (!operand2.empty()) {  // Case1: (op, operand1, operand2, result)
+         * @note 一个四元式的形式为 (op, operand1, operand2, result)。
+         *      一共有两种有效情况：
+         *        1. (op, operand1, operand2, result)
+         *        2. (= , operand1, _, result)
+        */
+        if (!operand2.empty()) {  // 情况1: (op, operand1, operand2, result)
             NodePtr node2 = nullptr;
             bool node2Exists = m_nodePtrMap.contains(operand2);
             if (node2Exists) {
                 node2 = m_nodePtrMap[operand2];
             } else {
-                // Create a new node for operand2.
+                // 为 operand2 创建一个新结点。
                 node2 = std::make_shared<DAGNode>();
                 node2->names.push_back(operand2);
                 node2->value = operand2;
@@ -87,36 +86,34 @@ void Optimizer::generateDAG(const std::vector<Quadruple>& quads)
             }
 
             /**
-             * @note If both operands are constants, calculate the result (which is also a constant)
-             * and create a new node for the result (if no such node exists).
-             */
+             * @note 如果两个操作数都是常数，计算出结果（常数）。
+            */
             if (node1->constant.has_value() && node2->constant.has_value()) {
                 int resultVal = calculate(op, node1->constant.value(), node2->constant.value());
                 std::string resultValStr = std::to_string(resultVal);
 
-                // If a node whose value is resultValStr exists, use it directly.
+                // 如果存在值为 resultValStr 的结点，直接使用它。
                 if (m_nodePtrMap.contains(resultValStr)) {
                     curNode = m_nodePtrMap[resultValStr];
                 }
-                // If no such node exists, create a new node for the result.
+                // 否则，为结果创建一个新结点。
                 else {
                     curNode = std::make_shared<DAGNode>();
                     curNode->value = resultValStr;
                     curNode->names = {};
                     curNode->constant = resultVal;
-                    // Add the node to the map.
+                    // 将结果添加到映射表中。
                     m_nodePtrMap[resultValStr] = curNode;
                 }
             }
             /**
-             * @note If there is a non-constant operand, find if a node whose value is op and
-             *      operands are node1 and node2 exists. If it exists, use it as the operator node.
-             *      Otherwise, create a new node for the operator.
-             * @note If the operands are node2 and node1, not node1 and node2, we still need to
-             *      create a new node for the operator.
-             */
+             * @note 如果有一个操作数不是常数，查找值为 op，操作数为 node1 和 node2 的结点是否存在。
+             *     如果存在，使用它作为操作符结点。否则，为操作符创建一个新结点。
+             * @note 如果操作数是 node2 和 node1，而不是 node1 和 node2，不可以直接使用已有的操作符结点，
+             *     必须创建一个新的操作符结点。
+            */
             else {
-                // If the nodes of operand1 and operand2 do not exist, add them to the map.
+                // 如果操作数为 node1 和 node2 的结点不存在，将它们添加到映射表中。
                 if (!node1Exists) {
                     m_nodePtrMap[operand1] = node1;
                 }
@@ -129,11 +126,11 @@ void Optimizer::generateDAG(const std::vector<Quadruple>& quads)
                            node->operands[0] == m_nodePtrMap[operand1] &&
                            node->operands[1] == m_nodePtrMap[operand2];
                 });
-                // If the operator node exists, use it.
+                // 如果操作符结点存在，使用它。
                 if (nodeIt != m_nodes.end()) {
                     curNode = *nodeIt;
                 }
-                // If not, create a new node for the operator.
+                // 否则，为操作符创建一个新结点。
                 else {
                     curNode = std::make_shared<DAGNode>();
                     curNode->names = {};
@@ -142,29 +139,27 @@ void Optimizer::generateDAG(const std::vector<Quadruple>& quads)
                     curNode->constant = std::nullopt;
                 }
             }
-        } else if (op == "=") {  // Case2: (= , operand1, _, result)
+        } else if (op == "=") {  // 情况2: (= , operand1, _, result)
             if (!node1Exists) {
                 /**
-                 * @note If the node of operand1 does not exist, it is a constant or an identifier.
-                 *      e.g. T1 := 3, T2 := a.
-                 *      We need to pop the name, otherwise, we will see (=, 3, _, 3) and (=, a, _,
-                 *      a).
-                 */
+                 * @note 如果 operand1 的结点不存在，它是一个常数或标识符，e.g. T1 := 3, T2 := a。
+                 *      需要移除设置的变量名，否则会看到 (=, 3, _, 3) 和 (=, a, _, a)这样的四元组
+                */
                 node1->names.pop_back();
                 m_nodePtrMap[operand1] = node1;
             }
-            // Use the node of operand1 as the operator node if it exists.
+            // 如果结果的结点存在，使用它。
             curNode = node1;
         } else {
             throw std::runtime_error("Unknown operation.");
         }
 
-        // Add the name of result to the operator node.
+        // 将结果的名字添加到操作符结点。
         curNode->names.push_back(result);
 
         /**
-         * @note If the result is already in the map, it means that its value has been updated.
-         */
+         * @note 如果结果已经在映射表中，说明它的值现在被更新了，需要将它从原来的结点中移除。
+        */
         auto resultIt = m_nodePtrMap.find(result);
         if (resultIt != m_nodePtrMap.end()) {
             auto [_, resultNode] = *resultIt;
@@ -172,7 +167,7 @@ void Optimizer::generateDAG(const std::vector<Quadruple>& quads)
             resultNode->names.erase(resultNameIt);
         }
 
-        // Remap the result to the operator node.
+        // 将结果重新映射到操作符结点。
         m_nodePtrMap[result] = curNode;
 
         auto nodeIt = std::ranges::find(m_nodes, curNode);

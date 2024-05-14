@@ -7,35 +7,34 @@ namespace PL0
 {
 void RuleAnalyzer::addRule(const Symbol& lhs, const std::vector<Symbol>& rhs)
 {
-    // Add the rule to m_rules.
+    // 将规则添加到 m_rules 中。
     Rule rule{lhs, rhs};
     m_rules.push_back(rule);
 
-    ///////////////////////////////////////////
-    // Collect all terminals and non-terminals
-    ///////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////
+    // 将所有终结符和非终结符收集到 m_terminals 和 m_nonTerminals 中。
+    /////////////////////////////////////////////////////////////////
 
     /**
-     * @note For the left-hand side symbol, it must be a non-terminal.
-     */
+     * @note 左侧一定是非终结符。
+    */
     m_nonTerminals.insert(lhs);
 
     /**
-     * @note For the right-hand side symbols, they can be terminals, non-terminals, or ε.
+     * @note 右侧的符号可能是终结符、非终结符或 ε。
      */
 
     if (rhs[0] == EPSILON) {
         /**
-         * @note ε does not belong to any set. Skip it.
-         */
+         * @note ε 不属于任何集合，跳过
+        */
         return;
     }
 
     for (const Symbol& sym : rhs) {
         /**
-         * @note If the symbol begins with A-Z, it is a non-terminal.
-         *      Otherwise, it is a terminal.
-         */
+         * @note 如果符号以 A-Z 开头，它是一个非终结符，否则是一个终结符。
+        */
         if (std::isupper(sym[0])) {
             m_nonTerminals.insert(sym);
         } else {
@@ -49,9 +48,9 @@ void RuleAnalyzer::calcFirstSets()
     m_firstSet.clear();
 
     /**
-     * @note Initialize the FIRST set.
-     *      If x is a terminal symbol, then FIRST(x) = {x}.
-     */
+     * @note 初始化 FIRST 集合。
+     *      如果 x 是终结符，则 FIRST(x) = {x}。
+    */
     for (const Symbol& sym : m_terminals) {
         m_firstSet[sym] = {sym};
     }
@@ -60,24 +59,23 @@ void RuleAnalyzer::calcFirstSets()
     }
 
     /**
-     * @note To calculate the FIRST set of non-terminal X,
-     *          1. Find all the rules that have X in the left-hand side.
-     *          2. Calculate the FIRST set of the right-hand side symbols of these rules.
-     *          3. Union these FIRST sets.
-     *     However, the FIRST sets of some right-hand side symbols may have not been calculated.
-     *     We need to keep iterating until no more symbols can be added to the FIRST set.
-     */
+     * @note 非终结符的 FIRST 集合的计算方法：
+     *          1. 将所有非终结符的 FIRST 集合初始化为空。
+     *          2. 计算每个规则右侧符号串的 FIRST 集合。
+     *          3. 将这些 FIRST 集合的非空符号并入左侧符号的 FIRST 集合。
+     *      然而，某些符号的 FIRST 集合可能尚未计算，需要不断循环，直到没有新的符号添加到 FIRST 集合。
+    */
 
     bool updated;
     do {
         updated = false;
-        m_firstSetCache.clear();  // Discard the cache
+        m_firstSetCache.clear();  // 清空缓存
 
         for (const auto& rule : m_rules) {
-            // Calculate the FIRST set of the right-hand side symbols of the rule.
+            // 计算每个规则右侧符号串的 FIRST 集合。
             auto [firstSet, allHasEpsilon] = calcFirstSetOfSyms(rule.rhs, 0, rule.rhs.size());
 
-            // Union the FIRST sets.
+            // 将 FIRST 集元素并入左侧符号的 FIRST 集合。
             for (const Symbol& sym : firstSet) {
                 auto [_, inserted] = m_firstSet[rule.lhs].insert(sym);
                 if (inserted) {
@@ -86,11 +84,9 @@ void RuleAnalyzer::calcFirstSets()
             }
 
             /**
-             * @note Cache the FIRST set of each rule.
-             *      If no FIRST set has been updated, the cache is valid.
-             *      Otherwise, discard the cache and recalculate the FIRST set in the next
-             *      iteration.
-             */
+             * @note 缓存每个规则的 FIRST 集合。
+             *      如果没有更新 FIRST 集合，缓存仍然有效；否则，丢弃缓存，并在下一次迭代中重新计算 FIRST 集合。
+            */
             if (!updated) {
                 m_firstSetCache.push_back({firstSet, allHasEpsilon});
             }
@@ -107,17 +103,16 @@ void RuleAnalyzer::calcFollowSets()
     }
 
     /**
-     * @note To calculate the FOLLOW set of non-terminal X,
-     *          1. Add ENDSYM to the FOLLOW set of the begin symbol.
-     *          2. Find all the rules that have X in the right-hand side.
-     *          3. Calculate the FIRST set of the symbols after X in the right-hand side.
-     *          4. Add the non-ε symbols in the FIRST set to the FOLLOW set of X.
-     *          5. If the FIRST set contains ε, add the FOLLOW set of the left-hand side symbol.
-     *     However, the FOLLOW sets of some symbols may have not been calculated.
-     *     We need to keep iterating until no more symbols can be added to the FOLLOW set.
-     */
+     * @note 非终结符的 FOLLOW 集合的计算方法：
+     *          1. 将结束符号添加到起始符号的 FOLLOW 集合中。
+     *          2. 找到所有右侧包含 X 的规则。
+     *          3. 计算 X 后面的符号串的 FIRST 集合。
+     *          4. 将 FIRST 集合中的非空符号添加到 X 的 FOLLOW 集合中。
+     *          5. 如果 FIRST 集合包含空，将左侧符号的 FOLLOW 集合添加到 X 的 FOLLOW 集合中。
+     *      然而，某些符号的 FOLLOW 集合可能尚未计算，需要不断循环，直到没有新的符号添加到 FOLLOW 集合。
+    */
 
-    // Add # to the FOLLOW set of the begin symbol.
+    // 将结束符号添加到起始符号的 FOLLOW 集合中。
     m_followSet[m_beginSym].insert(ENDSYM);
 
     bool updated;
@@ -131,10 +126,10 @@ void RuleAnalyzer::calcFollowSets()
                 const Symbol& rhsSym = rhs[i];  // X
 
                 if (isNonTerminal(rhsSym)) {
-                    // Calculate the FIRST set of the symbols after X in the right-hand side.
+                    // 计算 X 后面的符号串的 FIRST 集合。
                     auto [firstSet, allHasEpsilon] = calcFirstSetOfSyms(rhs, i + 1, rhs.size());
                     for (const Symbol& sym : firstSet) {
-                        // Add the non-ε symbols in the FIRST set to the FOLLOW set of X.
+                        // 将 FIRST 集合中的非空符号添加到 X 的 FOLLOW 集合中。
                         if (sym != EPSILON) {
                             auto [_, inserted] = m_followSet[rhsSym].insert(sym);
                             if (inserted) {
@@ -143,7 +138,7 @@ void RuleAnalyzer::calcFollowSets()
                         }
                     }
 
-                    // If the FIRST set contains ε, add the FOLLOW set of the left-hand side symbol.
+                    // 如果 FIRST 集合包含空，将左侧符号的 FOLLOW 集合添加到 X 的 FOLLOW 集合中。
                     if (allHasEpsilon) {
                         for (const Symbol& sym : m_followSet[lhs]) {
                             auto [_, inserted] = m_followSet[rhsSym].insert(sym);
@@ -170,16 +165,15 @@ void RuleAnalyzer::calcSelectSets()
         const auto& lhs = m_rules[i].lhs;  // X
         const auto& rhs = m_rules[i].rhs;  // Y1Y2...Yk
 
-        // 1. Get the FIRST set of Y1Y2...Yk.
+        // 1. 计算 Y1Y2...Yk 的 FIRST 集。
         auto [firstSet, allHasEpsilon] = m_firstSetCache[i];
-        // 2. Add the non-ε symbols in the FIRST set to the SELECT set of X.
+        // 2. 将 FIRST 集中的非空符号添加到 X 的 SELECT 集合中。
         for (const Symbol& sym : firstSet) {
             if (sym != EPSILON) {
                 m_selectSet[i].insert(sym);
             }
         }
-        // 3. If all symbols in the FIRST set have ε, add the FOLLOW set of X to the SELECT set of
-        // X.
+        // 3. 如果 FIRST 集中的所有符号都包含 ε，将 X 的 FOLLOW 集合添加到 X 的 SELECT 集合中。
         if (allHasEpsilon) {
             for (const Symbol& sym : m_followSet[lhs]) {
                 m_selectSet[i].insert(sym);
@@ -196,7 +190,7 @@ std::pair<std::set<Symbol>, bool> RuleAnalyzer::calcFirstSetOfSyms(const std::ve
 {
     std::set<Symbol> firstSet;
 
-    // If X -> ε, FIRST(X) = {ε}.
+    // 若 X -> ε，则 FIRST(X) = {ε}。
     if (syms[beginIdx] == EPSILON) {
         firstSet.insert(EPSILON);
         return {firstSet, true};
@@ -204,8 +198,7 @@ std::pair<std::set<Symbol>, bool> RuleAnalyzer::calcFirstSetOfSyms(const std::ve
 
     size_t i = beginIdx;
     for (; i < endIdx; ++i) {
-        // If Y1, Y2, ..., Yi-1 => ε, then add First(Y1)-{ε}, First(Y2)-{ε}, ..., First(Yi) to
-        // FIRST(X).
+        // 如果 Y1, Y2, ..., Yi-1 => ε，则将 First(Y1)-{ε}、First(Y2)-{ε}、...、First(Yi) 添加到
         if (isNonTerminal(syms[i])) {
             bool hasEpsilon = false;
             for (const Symbol& sym : m_firstSet.at(syms[i])) {
@@ -220,13 +213,13 @@ std::pair<std::set<Symbol>, bool> RuleAnalyzer::calcFirstSetOfSyms(const std::ve
                 break;
             }
         } else {
-            // If there is a terminal, then add it to FIRST(X) and stop the loop.
+            // 如果 Yi 是终结符，则将其添加到 FIRST(X) 中并停止循环。
             firstSet.insert(syms[i]);
             break;
         }
     }
 
-    // If Yi => ε for all i = 1, 2, ..., k, then add ε to FIRST(X).
+    // 如果 Y1, Y2, ..., Yk => ε，则将 ε 添加到 FIRST(X) 中。
     bool allHasEpsilon = (i == endIdx);
     if (allHasEpsilon) {
         firstSet.insert(EPSILON);

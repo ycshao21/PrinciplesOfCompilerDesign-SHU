@@ -17,35 +17,35 @@ struct Quadruple
 };
 
 /**
- * @note For an operator node,
+ * @note 操作符结点
  *      e.g. T1 := a + b, T2 := a + b
  *          - names: {T1, T2}
  *          - value: "+"
  *          - operands: {a, b}
  *          - constValue: nullopt
  *
- *       For a constant node,
+ *       常数结点
  *          a) T1 := 3
  *              - names: {T1}
  *              - value: "3"
- *              - operands: (empty)
+ *              - operands: (空)
  *              - constValue: 3
- *          b) 2 in T1 := 2 + a
- *              - names: (empty)
+ *          b) T1 := 2 + a 中的 2
+ *              - names: (空)
  *              - value: "2"
- *              - operands: (empty)
+ *              - operands: (空)
  *              - constValue: 2
  *
- *       For an identifier node,
+ *       标识符结点
  *          a) T1 := a
  *              - names: {T1}
  *              - value: "a"
- *              - operands: (empty)
+ *              - operands: (空)
  *              - constValue: nullopt
- *          b) a in T1 := 2 + a
- *              - names: (empty)
+ *          b) T1 := 2 + a 中的 a
+ *              - names: (空)
  *              - value: "a"
- *              - operands: (empty)
+ *              - operands: (空)
  *              - constValue: nullopt
  *
  */
@@ -53,10 +53,10 @@ struct DAGNode
 {
     using NodePtr = std::shared_ptr<DAGNode>;
 
-    std::vector<std::string> names;  // Names of variables that this node represents.
-    std::string value;  // The value of this node, can be a constant, an operator, or an identifier.
-    std::vector<NodePtr> operands;  // Operands of this node (if value is an operator)
-    std::optional<int> constant;    // The constant value of this node (if it is a constant).
+    std::vector<std::string> names;  // 结点所表示的变量名
+    std::string value;  // 结点的值，可为操作符、常数、标识符
+    std::vector<NodePtr> operands;  // 操作数 （如果是操作符结点）
+    std::optional<int> constant;    // 常数值（如果是常数结点）
 };
 
 class Optimizer
@@ -90,10 +90,8 @@ private:
     }
 
 private:
-    std::vector<NodePtr> m_nodes;  // A vector of all nodes in the DAG.
-
-    std::map<std::string, NodePtr>
-        m_nodePtrMap;  // A hash map mapping variable names to their corresponding nodes.
+    std::vector<NodePtr> m_nodes;  // DAG 结点
+    std::map<std::string, NodePtr> m_nodePtrMap;  // 将变量名映射到结点指针，用于查找结点
 };
 
 }  // namespace PL0

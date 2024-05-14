@@ -15,22 +15,22 @@ constexpr Symbol EPSILON = "";
 constexpr Symbol ENDSYM = "##";
 
 /**
- * @brief Translate the token to a symbol.
- * @param token The token.
- * @return The symbol.
+ * @brief 将词转换为符号。
+ * @param token 带转换的词。
+ * @return 转换后的符号。
 */
 Symbol translate2Symbol(const Token& token);
 
 /**
- * @brief Translate the token value to a symbol.
- * @param tokenValue The token value.
- * @return The symbol.
- * @warning This function is not suitable for keywords.
+ * @brief 将词值转换为符号。
+ * @param tokenValue 带转换的词值。
+ * @return 转换后的符号。
+ * @warning 该函数不适用于关键字。
 */
 Symbol translate2Symbol(const std::string& tokenValue);
 
 ///////////////////////////////////////////////////////////////////////////
-// Element (for semantic analysis)
+// 元素（用于语义分析）
 ///////////////////////////////////////////////////////////////////////////
 
 enum class SymbolType
@@ -43,27 +43,27 @@ enum class SymbolType
 };
 
 /**
- * @brief The element for semantic analysis.
- * @note For terminal symbols,
- *          - symbol: The terminal symbol. e.g. "+"
+ * @brief 语义分析元素。
+ * @note 对于终结符，
+ *          - symbol: 终结符，e.g. "+"
  *          - type: SymbolType::TERMINAL.
- *          - values: (empty)
- *       For non-terminal symbols,
- *          - symbol: The non-terminal symbol. e.g. "E"
+ *          - values: (空)
+ *       对于非终结符，
+ *          - symbol: 非终结符，e.g. "E"
  *          - type: SymbolType::NON_TERMINAL.
- *          - values: empty, or the value of the non-terminal symbol.
- *       For action symbols,
- *          - symbol: The action symbol. e.g. "10"
+ *          - values: 空，或者是非终结符携带的值。
+ *       对于动作符号，
+ *          - symbol: 动作符号，e.g. "10"
  *          - type: SymbolType::ACTION.
- *          - values: The operands for the action function.
- *       For synthesized symbols,
- *          - symbol: The synthesized symbol. e.g. "E"
+ *          - values: 动作函数的操作数。
+ *       对于综合属性代表的符号，
+ *          - symbol: 综合属性代表的符号，e.g. "T"
  *          - type: SymbolType::SYNTHESIZED.
- *          - values: The value of the synthesized symbol.
- *       For the end symbol,
+ *          - values: 综合属性的值。
+ *       对于结束符号，
  *          - symbol: ENDSYM
  *          - type: SymbolType::ENDSYM.
- *          - values: (empty)
+ *          - values: (空)
 */
 struct Element
 {

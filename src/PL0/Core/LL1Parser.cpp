@@ -14,7 +14,7 @@ LL1Parser::LL1Parser()
 void LL1Parser::initSyntax()
 {
     /**
-     * @note The syntax of arithmetic expressions:
+     * @note 算术表达式的文法：
      *  S -> E
      *  E -> + T E'
      *  E -> - T E'
@@ -70,7 +70,7 @@ void LL1Parser::generatePredictionTable()
 void LL1Parser::parse(const std::vector<Token>& tokens)
 {
     /**
-     * @note Input stack (The bottom is at index 0):
+     * @note 剩余输入串（栈底下标为 0）：
      *   a + 5 * b  =>
      *   ----------------------------
      *   | ENDSYM  id  *  num  +  id   <---
@@ -78,15 +78,15 @@ void LL1Parser::parse(const std::vector<Token>& tokens)
      */
     std::vector<Symbol> inputStack{ENDSYM};
 
-    // Tranlate all tokens to symbols and push them in reverse order.
+    // 将所有词转换为符号，并逆序推入栈中。
     for (auto it = tokens.rbegin(); it != tokens.rend(); ++it) {
         Symbol symbol = translate2Symbol(*it);
         inputStack.push_back(symbol);
     }
 
     /**
-     * @note Analysis stack (The bottom is at index 0):
-     *   Initial state:
+     * @note 分析栈（栈底下标为 0）：
+     *   初始状态：
      *    --------------------
      *    |  ENDSYM  BEGINSYM      <---
      *    --------------------
@@ -99,9 +99,8 @@ void LL1Parser::parse(const std::vector<Token>& tokens)
             Symbol itop = inputStack.back();
 
             /**
-             * @note If the top of the analysis stack is a terminal symbol or the end symbol,
-             *      then it should match the top of the input stack.
-             */
+             * @note 如果分析栈顶部是终结符或结束符号，则正常情况下应该与输入栈顶部匹配。
+            */
             if (m_analyzer.isTerminal(atop) || atop == ENDSYM) {
                 if (atop != itop) {  // Mismatch
                     throw SyntaxError(std::format(
@@ -109,28 +108,26 @@ void LL1Parser::parse(const std::vector<Token>& tokens)
                         atop, itop));
                 }
 
-                // Pop analysis stack and input stack.
+                // 分析栈顶部和输入栈顶部匹配，因此将它们弹出。
                 analysisStack.pop_back();
                 inputStack.pop_back();
             } else {
                 /**
-                 * @note If the top of the analysis stack is a non-terminal symbol X,
-                 *     find the production rule X -> Y1Y2...Yn in the prediction table,
-                 *     and replace X with Y1Y2...Yn (in reverse order) in the analysis stack (except ε).
-                 */
+                 * @note 如果分析栈顶部是非终结符 X，
+                 *      在预测分析表中查找产生式 X -> Y1Y2...Yn，
+                 *      并将 X 出栈，将 Y1Y2...Yn 中的非空符号逆序推入分析栈。
+                */
 
                 const auto& items = m_predictionTable[atop];
-                if (items.find(itop) == items.end()) {  // No such production rule
+                if (items.find(itop) == items.end()) {  // 规则不存在
                     throw SyntaxError(std::format("{} is not allowed.", itop));
                 }
                 const auto& rhs = m_predictionTable[atop][itop];
 
-                // 1) Pop X
                 analysisStack.pop_back();
 
-                // 2) Push Yn, Yn-1, ..., Y1
                 for (auto it = rhs.rbegin(); it != rhs.rend(); ++it) {
-                    if (*it != EPSILON) {  // Skip ε
+                    if (*it != EPSILON) {  // 跳过 ε
                         analysisStack.push_back(*it);
                     }
                 }
@@ -142,8 +139,9 @@ void LL1Parser::parse(const std::vector<Token>& tokens)
     }
 
     /**
-     * @note It is impossible that one of the stacks is empty while the other is not.
-     */
+     * @note 如果分析栈和输入栈都为空，则语法正确。
+     *      不可能存在其中一个栈为空而另一个不为空的情况。
+    */
     Reporter::success("Syntax correct.");
 }
 
