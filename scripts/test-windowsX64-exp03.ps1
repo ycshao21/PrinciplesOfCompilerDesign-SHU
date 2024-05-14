@@ -11,25 +11,18 @@ if (-not ($args[0] -like "*.pl0")) {
 }
 
 # Check if binary file exists
-$BIN="bin\Release\Windows_AMD64\Release\exp02.exe"
+$BIN="bin\Release\Windows_AMD64\Release\exp03.exe"
 if (-not (Test-Path $BIN -PathType Leaf)) {
     Write-Host "Error: $BIN does not exist"
     exit 1
 }
 
 # Check if source file exists
-$SRC_FILE="tests\data\exp02-analyze-lexical\$($args[0])"
+$SRC_FILE="tests\data\exp03-analyze-syntax\$($args[0])"
 if (-not (Test-Path $SRC_FILE -PathType Leaf)) {
     Write-Host "Error: $SRC_FILE does not exist"
     exit 1
 }
 
-# Make directories for outputs
-$OUT_DIR="tests\outputs\exp02-analyze-lexical"
-if (-not (Test-Path $OUT_DIR -PathType Container)) {
-    New-Item -ItemType Directory -Path $OUT_DIR | Out-Null
-}
-$OUT_FILE=Join-Path -Path $OUT_DIR -ChildPath "$($args[0]).out"
-
 # Compile the program and save the output
-& $BIN -f $SRC_FILE -o $OUT_FILE
+& $BIN -f $SRC_FILE

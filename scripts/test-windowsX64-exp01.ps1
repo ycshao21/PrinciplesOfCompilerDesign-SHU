@@ -11,7 +11,7 @@ if (-not ($args[0] -like "*.pl0")) {
 }
 
 # Check if binary file exists
-$BIN="bin\Release\Windows_AMD64\exp01.exe"
+$BIN="bin\Release\Windows_AMD64\Release\exp01.exe"
 if (-not (Test-Path $BIN -PathType Leaf)) {
     Write-Host "Error: $BIN does not exist"
     exit 1
@@ -29,7 +29,7 @@ $OUT_DIR="tests\outputs\exp01-recognize-identifier"
 if (-not (Test-Path $OUT_DIR -PathType Container)) {
     New-Item -ItemType Directory -Path $OUT_DIR | Out-Null
 }
-$OUT_FILE=Join-Path -Path $OUT_DIR -ChildPath $args[0] + ".out"
+$OUT_FILE=Join-Path -Path $OUT_DIR -ChildPath "$($args[0]).out"
 
 # Compile the program and save the output
 & $BIN -f $SRC_FILE -o $OUT_FILE

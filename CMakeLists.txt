@@ -19,10 +19,12 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Zi")
     # MSVC compiler-specific options
     add_compile_options(/permissive- /Zc:forScope)
+    message(STATUS "MSVC compiler detected")
 else()
     # Set different compile options for Release and Debug modes
     set(CMAKE_CXX_FLAGS_RELEASE "-O3")
     set(CMAKE_CXX_FLAGS_DEBUG "-g")
+    message(STATUS "Non-MSVC compiler detected")
 endif()
 
 add_subdirectory(src)
