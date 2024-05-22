@@ -1,5 +1,5 @@
 #pragma once
-#include "PL0/Utils/Exception.hpp"
+#include "PL0/Utils/Error.hpp"
 #include <map>
 #include <memory>
 #include <string>

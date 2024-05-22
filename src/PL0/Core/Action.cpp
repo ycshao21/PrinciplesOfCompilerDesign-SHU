@@ -1,5 +1,5 @@
 #include "PL0/Core/Action.hpp"
-#include "PL0/Utils/Exception.hpp"
+#include "PL0/Utils/Error.hpp"
 #include "PL0/Utils/Reporter.hpp"
 #include <format>
 

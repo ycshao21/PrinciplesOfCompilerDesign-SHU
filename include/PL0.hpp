@@ -5,7 +5,6 @@
 #include "PL0/Core/Lexer.hpp"
 
 // Experiment 3
-#include "PL0/Core/RecursiveDescentParser.hpp"
 #include "PL0/Core/LL1Parser.hpp"
 
 // Experiment 4
