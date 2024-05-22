@@ -6,22 +6,22 @@
 namespace PL0
 {
 /**
- * @brief A character scanner for reading the PL/0 source file.
+ * @brief 扫描器，用于读取 PL/0 源文件。
  */
 class Scanner
 {
 public:
     /**
-     * @param filename The path to the PL/0 source file.
-     * @throw std::runtime_error If the file cannot be opened.
-     * @note The cursor will be set to the first character.
+     * @param filename PL/0 源文件的路径。
+     * @throw std::runtime_error 如果无法打开文件。
+     * @note 文件指针会指向第一个字符。
      */
     Scanner(const std::string& filename);
     ~Scanner();
 
 public:
     /**
-     * @return The current character.
+     * @return 当前字符。
      */
     inline char get() const
     {
@@ -29,7 +29,7 @@ public:
     }
 
     /**
-     * @return The current character as a string.
+     * @return 当前字符的字符串形式。
      */
     inline std::string getAsStr() const
     {
@@ -37,20 +37,20 @@ public:
     }
 
     /**
-     * @brief Get the characters until the function {fn} returns false.
-     * @param fn The function to determine whether to continue reading.
-     * @return The characters read.
-     * @note {fn} will not determine the first character.
+     * @brief 持续读取字符，直到函数 `fn` 返回 false。
+     * @param fn 用于判断是否继续读取的函数。
+     * @return 读取到的字符。
+     * @note `fn` 不会判断第一个字符。
      */
     std::string getUntil(std::function<bool(char)> fn);
 
     /**
-     * @brief Skip the spaces and comments, and stop at the first available character.
+     * @brief 跳过空格和注释，停在第一个有效字符处。
      */
     void skipSpaceAndComments();
     /**
-     * @brief Move the cursor to the next character.
-     */
+     * @brief 将指针移向下一个字符。
+    */
     void forward();
 
 private:

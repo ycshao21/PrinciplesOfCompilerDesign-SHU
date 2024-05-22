@@ -8,7 +8,7 @@ namespace PL0
 constexpr int NULL_OFFSET = -999999999;  // The value does not need to be passed.
 
 /**
- * @brief 使用 LL(1) 实现的 PL/0 语义分析器。
+ * @brief 使用预测分析表实现的 PL/0 语义分析器。
  * @note 该分析器只能解析算术表达式。
  */
 class SemanticLL1Parser : public Parser

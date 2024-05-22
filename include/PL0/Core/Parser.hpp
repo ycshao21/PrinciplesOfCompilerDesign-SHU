@@ -5,9 +5,6 @@
 
 namespace PL0
 {
-/**
- * @brief The Parser class is an abstract class that defines the interface for parsing tokens.
-*/
 class Parser
 {
 public:

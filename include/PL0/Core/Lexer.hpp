@@ -6,6 +6,9 @@
 
 namespace PL0
 {
+/**
+ * @brief 词法分析器
+*/
 class Lexer
 {
 public:
@@ -13,16 +16,15 @@ public:
     ~Lexer() = default;
 
     /**
-     * @brief Convert the PL/0 source code into a sequence of tokens.
-     * @param srcFile The path to the PL/0 source file.
-     * @return The sequence of tokens.
-     * @note All the invalid identifiers will be reported.
-     */
+     * @brief 将 PL/0 源代码转换为单词序列。
+     * @param srcFile PL/0 源文件的路径。
+     * @note 词法分析器会检查出所有无效的单词。
+    */
     std::vector<Token> tokenize(const std::string& srcFile);
 
     /**
-     * @brief Encode a token into a string.
-     * @param token The token to be encoded.
+     * @brief 将单词编码为字符串（供实验二实验）
+     * @param token 待编码的单词。
      */
     static std::string encode(const Token& token) noexcept;
 

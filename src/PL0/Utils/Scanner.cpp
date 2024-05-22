@@ -8,7 +8,7 @@ Scanner::Scanner(const std::string& filename) : m_file(filename)
         throw std::runtime_error("Failed to open file: " + filename);
     }
 
-    // Set the cursor to the first character of the PL/0 source file.
+    // 将指针指向 PL/0 源文件的第一个字符。
     forward();
 }
 
@@ -25,15 +25,16 @@ void Scanner::forward()
 void Scanner::skipSpaceAndComments()
 {
     while (true) {
-        // Skip the spaces
+        // 跳过空白字符
         while (std::isspace(m_curChar)) {
             forward();
         }
 
-        // Skip the comments
+        // 跳过注释
         /**
-         * @note The comments are enclosed by '{' and '}'.
+         * @note 注释的内容是由 '{' 和 '}' 包围的。
          *       e.g. {This is a comment}
+         * 
         */
         if (m_curChar == '{') {
             do {

@@ -6,7 +6,7 @@
 namespace PL0
 {
 /**
- * @brief 使用 LL(1) 实现的 PL/0 语法分析器。
+ * @brief 使用预测分析表实现的 PL/0 语法分析器。
 */
 class LL1Parser : public Parser
 {

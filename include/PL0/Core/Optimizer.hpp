@@ -1,5 +1,5 @@
 #pragma once
-#include "PL0/Utils/Exception.hpp"
+#include "PL0/Utils/Error.hpp"
 #include <map>
 #include <memory>
 #include <string>
@@ -59,6 +59,9 @@ struct DAGNode
     std::optional<int> constant;    // 常数值（如果是常数结点）
 };
 
+/**
+ * @brief 局部代码优化器
+*/
 class Optimizer
 {
     using NodePtr = std::shared_ptr<DAGNode>;
